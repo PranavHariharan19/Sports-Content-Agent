@@ -8,6 +8,13 @@ from schemas.common import (
     VerificationVerdict,
 )
 from schemas.config import AppConfig, LLMConfig, PipelineConfig, RootConfig, load_config
+from schemas.discovery import (
+    ChooseTopicRequest,
+    DiscoveredArticle,
+    DiscoveryRunResult,
+    StoryCluster,
+    ViralityBreakdown,
+)
 from schemas.job import JobRecord, StageRunRecord
 from schemas.llm import LLMCacheRecord, LLMRequest, LLMResponse, LLMUsageRecord, TokenUsage
 
@@ -26,6 +33,11 @@ __all__ = [
     "load_config",
     "JobRecord",
     "StageRunRecord",
+    "DiscoveredArticle",
+    "ViralityBreakdown",
+    "StoryCluster",
+    "DiscoveryRunResult",
+    "ChooseTopicRequest",
     "LLMCacheRecord",
     "LLMRequest",
     "LLMResponse",

@@ -1,8 +1,12 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator, Dict, List, Optional
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
+from app.api.discovery import router as discovery_router
 from app.logging_config import get_logger, setup_logging
 from pipeline.db import DatabaseManager
 from pipeline.state_machine import PipelineStateMachine
@@ -20,6 +24,9 @@ def create_app(config: Optional[RootConfig] = None) -> FastAPI:
 
     db = DatabaseManager(cfg.app.database_path)
     state_machine = PipelineStateMachine(db)
+
+    templates_dir = Path(__file__).parent / "templates"
+    templates = Jinja2Templates(directory=str(templates_dir))
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -46,6 +53,14 @@ def create_app(config: Optional[RootConfig] = None) -> FastAPI:
     app.state.config = cfg
     app.state.db = db
     app.state.state_machine = state_machine
+
+    # Register API routers
+    app.include_router(discovery_router)
+
+    @app.get("/", response_class=HTMLResponse)
+    @app.get("/ui", response_class=HTMLResponse)
+    async def get_dashboard(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse(request=request, name="index.html")
 
     @app.get("/health")
     async def health_check() -> Dict[str, str]:

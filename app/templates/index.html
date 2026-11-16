@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sports Shorts Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">⚡</span>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+            Sports Shorts Command Center
+          </h1>
+          <p class="text-xs text-slate-400">Zero-Cost &bull; Human-in-the-Loop AI Shorts</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4">
+        <div id="jobStatusBadge" class="hidden px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+          Job: <span id="activeJobIdText">None</span> &bull; <span id="activeJobStatusText">IDLE</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Checkpoint Notification Banner -->
+    <div id="checkpointBanner" class="hidden mb-6 p-4 rounded-xl border border-cyan-500/30 bg-cyan-950/40 text-cyan-200 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-xl">🎯</span>
+        <div>
+          <div class="font-semibold text-sm">Checkpoint 1: Topic Selected!</div>
+          <div id="selectedTopicTitle" class="text-xs text-cyan-300">Ready for Stage 3: Source Verification</div>
+        </div>
+      </div>
+      <span class="text-xs px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 font-mono">STATUS: TOPIC_CHOSEN</span>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 mb-8 shadow-xl">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <!-- Sport Filter Pills -->
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-2">Sport:</span>
+          <button onclick="setSport('football')" id="btn-football" class="sport-tab px-4 py-2 rounded-lg text-sm font-semibold transition bg-emerald-500 text-slate-950">
+            ⚽ Football
+          </button>
+          <button onclick="setSport('cricket')" id="btn-cricket" class="sport-tab px-4 py-2 rounded-lg text-sm font-semibold transition bg-slate-800 text-slate-300 hover:bg-slate-700">
+            🏏 Cricket
+          </button>
+          <button onclick="setSport('f1')" id="btn-f1" class="sport-tab px-4 py-2 rounded-lg text-sm font-semibold transition bg-slate-800 text-slate-300 hover:bg-slate-700">
+            🏎️ Formula 1
+          </button>
+        </div>
+
+        <!-- Action Button -->
+        <div class="flex items-center space-x-3">
+          <button id="discoverBtn" onclick="runDiscovery()" class="flex items-center space-x-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-500/20 active:scale-95 transition">
+            <span id="discoverIcon">⚡</span>
+            <span id="discoverText">Discover Trending Stories</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Candidate Stories Feed -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold text-slate-300 flex items-center space-x-2">
+          <span>Top Candidates Ranked by Virality</span>
+          <span id="candidateCount" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">0</span>
+        </h2>
+        <span class="text-xs text-slate-500">Checkpoint 1: Select 1 story to proceed to scripting</span>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingIndicator" class="hidden py-16 text-center">
+        <div class="inline-block animate-spin text-3xl mb-3 text-emerald-400">🌀</div>
+        <p class="text-sm text-slate-400">Discovering RSS feeds, Reddit velocity & Wikipedia pageviews...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="py-16 text-center border border-dashed border-slate-800 rounded-2xl">
+        <span class="text-4xl block mb-2">📰</span>
+        <h3 class="text-sm font-semibold text-slate-300">No Stories Discovered Yet</h3>
+        <p class="text-xs text-slate-500 mt-1">Click "Discover Trending Stories" above to run discovery.</p>
+      </div>
+
+      <!-- Candidate Cards Container -->
+      <div id="candidatesList" class="grid grid-cols-1 gap-4"></div>
+    </div>
+  </main>
+
+  <script>
+    let currentSport = 'football';
+    let currentJobId = null;
+
+    function setSport(sport) {
+      currentSport = sport;
+      document.querySelectorAll('.sport-tab').forEach(btn => {
+        btn.className = 'sport-tab px-4 py-2 rounded-lg text-sm font-semibold transition bg-slate-800 text-slate-300 hover:bg-slate-700';
+      });
+      const activeBtn = document.getElementById(`btn-${sport}`);
+      if (activeBtn) {
+        activeBtn.className = 'sport-tab px-4 py-2 rounded-lg text-sm font-semibold transition bg-emerald-500 text-slate-950 font-bold';
+      }
+    }
+
+    async function runDiscovery() {
+      const btn = document.getElementById('discoverBtn');
+      const text = document.getElementById('discoverText');
+      const loading = document.getElementById('loadingIndicator');
+      const empty = document.getElementById('emptyState');
+      const list = document.getElementById('candidatesList');
+
+      btn.disabled = true;
+      text.textContent = 'Discovering & Scoring...';
+      loading.classList.remove('hidden');
+      empty.classList.add('hidden');
+      list.innerHTML = '';
+
+      try {
+        const res = await fetch(`/api/discovery/run?sport=${currentSport}`, { method: 'POST' });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+
+        currentJobId = data.job_id;
+        updateJobBadge(currentJobId, 'RANKED');
+        renderCandidates(data.candidates);
+      } catch (err) {
+        alert('Discovery error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        text.textContent = 'Discover Trending Stories';
+        loading.classList.add('hidden');
+      }
+    }
+
+    function updateJobBadge(jobId, status) {
+      const badge = document.getElementById('jobStatusBadge');
+      document.getElementById('activeJobIdText').textContent = jobId.slice(0, 8);
+      document.getElementById('activeJobStatusText').textContent = status;
+      badge.classList.remove('hidden');
+    }
+
+    function renderCandidates(candidates) {
+      const container = document.getElementById('candidatesList');
+      const count = document.getElementById('candidateCount');
+      const empty = document.getElementById('emptyState');
+
+      container.innerHTML = '';
+      count.textContent = candidates.length;
+
+      if (!candidates || candidates.length === 0) {
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      candidates.forEach((c, index) => {
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-xl p-5 transition shadow-sm hover:shadow-md';
+
+        const score = c.virality ? c.virality.final_score : 0;
+        let scoreColor = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+        if (score >= 70) scoreColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+        else if (score >= 45) scoreColor = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20';
+
+        const breakdown = c.virality || {};
+        const sourcesBadges = (c.articles || []).map(a => {
+          let tierBadge = 'bg-slate-800 text-slate-400';
+          if (a.source_tier === 'tier_1') tierBadge = 'bg-emerald-950 text-emerald-400 border border-emerald-700/40';
+          else if (a.source_tier === 'tier_2') tierBadge = 'bg-blue-950 text-blue-300 border border-blue-700/40';
+          return `<span class="text-[11px] px-2 py-0.5 rounded font-mono ${tierBadge}" title="${a.url}">${a.domain}</span>`;
+        }).join(' ');
+
+        card.innerHTML = `
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex-1 space-y-2">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">#${index + 1}</span>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase">${c.sport}</span>
+                <span class="text-xs text-slate-500">&bull; ${c.age_hours}h ago</span>
+              </div>
+              <h3 class="text-base font-semibold text-slate-100">${c.primary_headline}</h3>
+              
+              <!-- Source Badges -->
+              <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                <span class="text-xs text-slate-500 mr-1">${c.source_count} source(s):</span>
+                ${sourcesBadges}
+              </div>
+
+              <!-- Virality Breakdown Bar -->
+              <div class="pt-2 flex flex-wrap gap-2 text-xs text-slate-400 font-mono">
+                <span class="bg-slate-950 px-2 py-1 rounded border border-slate-800">Recency: <strong class="text-slate-200">${breakdown.recency_score || 0}/25</strong></span>
+                <span class="bg-slate-950 px-2 py-1 rounded border border-slate-800">Sources: <strong class="text-slate-200">${breakdown.sources_score || 0}/25</strong></span>
+                <span class="bg-slate-950 px-2 py-1 rounded border border-slate-800">Reddit: <strong class="text-slate-200">${breakdown.reddit_velocity_score || 0}/25</strong></span>
+                <span class="bg-slate-950 px-2 py-1 rounded border border-slate-800">Stars: <strong class="text-slate-200">${breakdown.star_weight_score || 0}/15</strong></span>
+                <span class="bg-slate-950 px-2 py-1 rounded border border-slate-800">Pageviews: <strong class="text-slate-200">${breakdown.pageview_interest_score || 0}/10</strong></span>
+              </div>
+            </div>
+
+            <!-- Score Badge & Choose Action -->
+            <div class="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 border-t md:border-t-0 pt-3 md:pt-0 border-slate-800">
+              <div class="text-center">
+                <div class="px-3.5 py-1.5 rounded-xl border text-sm font-bold font-mono ${scoreColor}">
+                  ⚡ ${score} <span class="text-[10px] font-normal text-slate-400">/ 100</span>
+                </div>
+                <div class="text-[10px] text-slate-500 uppercase font-semibold mt-1">Virality Score</div>
+              </div>
+              <button onclick="chooseTopic('${c.cluster_id}', '${c.primary_headline.replace(/'/g, "\\'")}')" class="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 active:scale-95 transition shadow">
+                Select Story &rarr;
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    async function chooseTopic(clusterId, headline) {
+      if (!currentJobId) {
+        alert("No active job. Please run discovery first.");
+        return;
+      }
+      if (!confirm(`Confirm selection of topic:\n\n"${headline}"\n\nThis will complete Checkpoint 1 and move the pipeline to TOPIC_CHOSEN.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/discovery/choose-topic?job_id=${currentJobId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cluster_id: clusterId })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const updatedJob = await res.json();
+
+        updateJobBadge(updatedJob.job_id, updatedJob.status);
+
+        // Show Checkpoint 1 confirmation banner
+        const banner = document.getElementById('checkpointBanner');
+        document.getElementById('selectedTopicTitle').textContent = `"${headline}" — Proceeding to Milestone 3 (Source Fetching & Verification)`;
+        banner.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        alert('Failed to select topic: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
