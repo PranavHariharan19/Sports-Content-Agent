@@ -413,7 +413,7 @@
                 </div>
                 <div class="text-[10px] text-slate-500 uppercase font-semibold mt-1">Virality Score</div>
               </div>
-              <button onclick="chooseTopic('${c.cluster_id}', '${c.primary_headline.replace(/'/g, "\\'")}')" class="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 active:scale-95 transition shadow">
+              <button id="btn-select-${c.cluster_id}" onclick="chooseTopic('${c.cluster_id}', '${c.primary_headline.replace(/'/g, "\\'")}')" class="select-story-btn px-4 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 active:scale-95 transition shadow">
                 Select Story &rarr;
               </button>
             </div>
@@ -443,15 +443,66 @@
 
         updateJobBadge(updatedJob.job_id, updatedJob.status);
 
+        // Visually mark selected button
+        document.querySelectorAll('.select-story-btn').forEach(b => {
+          b.className = 'select-story-btn px-4 py-2 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 active:scale-95 transition shadow';
+          b.textContent = 'Select Story →';
+        });
+        const selectedBtn = document.getElementById(`btn-select-${clusterId}`);
+        if (selectedBtn) {
+          selectedBtn.className = 'select-story-btn px-4 py-2 rounded-lg text-xs font-bold bg-cyan-400 text-slate-950 transition shadow';
+          selectedBtn.textContent = 'Selected ✓';
+        }
+
         // Show Checkpoint 1 confirmation banner
         const banner = document.getElementById('checkpointBanner');
-        document.getElementById('selectedTopicTitle').textContent = `"${headline}" — Proceeding to Milestone 3 (Source Fetching & Verification)`;
+        document.getElementById('selectedTopicTitle').textContent = `"${headline}" — Ready to Fetch Sources & Extract Facts`;
         banner.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (err) {
         alert('Failed to select topic: ' + err.message);
       }
     }
+
+    // Auto-restore latest job state on page load (crash resumption)
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const res = await fetch('/api/jobs?limit=1');
+        if (!res.ok) return;
+        const jobs = await res.json();
+        if (!jobs || jobs.length === 0) return;
+
+        const latest = jobs[0];
+        currentJobId = latest.job_id;
+        updateJobBadge(latest.job_id, latest.status);
+
+        if (latest.status === 'RANKED' || latest.status === 'TOPIC_CHOSEN') {
+          const candRes = await fetch(`/api/discovery/candidates?job_id=${latest.job_id}`);
+          if (candRes.ok) {
+            const candidates = await candRes.json();
+            renderCandidates(candidates);
+          }
+          if (latest.status === 'TOPIC_CHOSEN') {
+            const banner = document.getElementById('checkpointBanner');
+            document.getElementById('selectedTopicTitle').textContent = `Topic selected. Ready to fetch sources and draft script.`;
+            banner.classList.remove('hidden');
+          }
+        } else if (latest.status === 'SCRIPT_DRAFTED' || latest.status === 'SCRIPT_APPROVED') {
+          const factsRes = await fetch(`/api/jobs/${latest.job_id}/facts`);
+          if (factsRes.ok) {
+            const ledger = await factsRes.json();
+            (ledger.facts || []).forEach(f => { currentFactsById[f.fact_id] = f; });
+          }
+          const scrRes = await fetch(`/api/jobs/${latest.job_id}/script`);
+          if (scrRes.ok) {
+            currentScript = await scrRes.json();
+            renderScriptReview(currentScript);
+          }
+        }
+      } catch (e) {
+        console.warn('Could not auto-restore previous job state:', e);
+      }
+    });
   </script>
 </body>
 </html>

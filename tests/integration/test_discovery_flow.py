@@ -87,3 +87,16 @@ def test_discovery_and_topic_choice_lifecycle(test_client: TestClient, db_manage
         refreshed_job = db_manager.get_job(job_id)
         assert refreshed_job is not None
         assert refreshed_job.status == JobStatus.TOPIC_CHOSEN
+
+        # 4. Candidates list remains queryable after topic choice (resilience check)
+        cand_res_after = test_client.get(f"/api/discovery/candidates?job_id={job_id}")
+        assert cand_res_after.status_code == 200
+        assert len(cand_res_after.json()) == len(cand_data)
+
+        # 5. Re-selecting topic or confirming choice does not fail with "not found in job ranking"
+        rechoose_res = test_client.post(
+            f"/api/discovery/choose-topic?job_id={job_id}",
+            json={"cluster_id": cluster_id},
+        )
+        assert rechoose_res.status_code == 200
+        assert rechoose_res.json()["status"] == "TOPIC_CHOSEN"

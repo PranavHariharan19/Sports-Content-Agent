@@ -120,13 +120,15 @@ async def get_candidates(
     db: DatabaseManager = Depends(get_db),
 ) -> List[StoryCluster]:
     """Retrieve ranked story candidates from the latest ranking stage of a job."""
-    stage_run = db.get_latest_stage_run(job_id, StageName.RANKING)
-    if not stage_run:
-        raise HTTPException(status_code=404, detail="No ranking run found for this job")
+    stage_runs = db.get_stage_runs_for_job(job_id)
+    for sr in reversed(stage_runs):
+        if sr.stage_name == StageName.RANKING:
+            output = sr.get_output()
+            raw_candidates = output.get("candidates", [])
+            if raw_candidates:
+                return [StoryCluster.model_validate(c) for c in raw_candidates]
 
-    output = stage_run.get_output()
-    raw_candidates = output.get("candidates", [])
-    return [StoryCluster.model_validate(c) for c in raw_candidates]
+    raise HTTPException(status_code=404, detail="No ranking run found for this job")
 
 
 @router.post("/choose-topic", response_model=JobRecord)
@@ -147,22 +149,38 @@ async def choose_topic(
             detail=f"Job must be in RANKED status to choose topic (current: {job.status.value})",
         )
 
-    # Find the chosen candidate cluster
-    stage_run = db.get_latest_stage_run(job_id, StageName.RANKING)
-    if not stage_run:
-        raise HTTPException(status_code=400, detail="Cannot choose topic before ranking stage has completed")
+    target_cluster_id = payload.cluster_id.strip()
 
-    candidates = stage_run.get_output().get("candidates", [])
-    chosen = next((c for c in candidates if c.get("cluster_id") == payload.cluster_id), None)
+    # Find candidate clusters from all ranking stage runs
+    stage_runs = db.get_stage_runs_for_job(job_id)
+    candidates: List[Dict[str, Any]] = []
+    already_chosen: Optional[Dict[str, Any]] = None
+
+    for sr in reversed(stage_runs):
+        if sr.stage_name == StageName.RANKING:
+            out = sr.get_output()
+            if not candidates and out.get("candidates"):
+                candidates = out["candidates"]
+            if not already_chosen and out.get("chosen_topic"):
+                already_chosen = out["chosen_topic"]
+
+    chosen = next((c for c in candidates if c.get("cluster_id") == target_cluster_id), None)
+    if not chosen and already_chosen and already_chosen.get("cluster_id") == target_cluster_id:
+        chosen = already_chosen
+
     if not chosen:
-        raise HTTPException(status_code=404, detail=f"Candidate cluster {payload.cluster_id} not found in job ranking")
+        raise HTTPException(status_code=404, detail=f"Candidate cluster {target_cluster_id} not found in job ranking")
 
-    # Record checkpoint action
+    # Record checkpoint action, preserving candidates list for re-inspection and reruns
+    output_data: Dict[str, Any] = {"chosen_topic": chosen}
+    if candidates:
+        output_data["candidates"] = candidates
+
     sm.record_stage_execution(
         job_id=job_id,
         stage_name=StageName.RANKING,  # updates with selection
-        input_data={"action": "choose_topic", "cluster_id": payload.cluster_id},
-        output_data={"chosen_topic": chosen},
+        input_data={"action": "choose_topic", "cluster_id": target_cluster_id},
+        output_data=output_data,
         success=True,
         allow_rerun=True,
     )
