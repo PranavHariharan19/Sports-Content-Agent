@@ -1,0 +1,92 @@
+# Source Trust Model Configuration
+
+tiers:
+  tier_1:
+    description: "Official governing bodies, clubs, official leagues"
+    domains:
+      - "fia.com"
+      - "formula1.com"
+      - "icc-cricket.com"
+      - "bcci.tv"
+      - "premierleague.com"
+      - "uefa.com"
+      - "fifa.com"
+      - "arsenal.com"
+      - "mancity.com"
+      - "chelseafc.com"
+      - "liverpoolfc.com"
+      - "realmadrid.com"
+      - "fcbarcelona.com"
+      - "ferrari.com"
+      - "mercedesamgf1.com"
+      - "redbullracing.com"
+
+  tier_2:
+    description: "Established, reputable journalism outlets with editorial standards"
+    domains:
+      - "bbc.com"
+      - "bbc.co.uk"
+      - "espn.com"
+      - "espn.co.uk"
+      - "espncricinfo.com"
+      - "cricbuzz.com"
+      - "skysports.com"
+      - "theguardian.com"
+      - "reuters.com"
+      - "apnews.com"
+      - "autosport.com"
+      - "motorsport.com"
+      - "theathletic.com"
+      - "telegraph.co.uk"
+
+  tier_3:
+    description: "Aggregators, fan blogs, social discussion forums (never sufficient on their own)"
+    domains:
+      - "reddit.com"
+      - "twitter.com"
+      - "x.com"
+      - "caughtoffside.com"
+      - "tribalfootball.com"
+      - "sportskeeda.com"
+
+rss_feeds:
+  football:
+    - name: "BBC Sport - Football"
+      url: "https://feeds.bbci.co.uk/sport/football/rss.xml"
+      tier: "tier_2"
+    - name: "Sky Sports - Football"
+      url: "https://www.skysports.com/rss/12040"
+      tier: "tier_2"
+    - name: "ESPN FC"
+      url: "https://www.espn.com/espn/rss/soccer/news"
+      tier: "tier_2"
+
+  cricket:
+    - name: "ESPNcricinfo"
+      url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml"
+      tier: "tier_2"
+    - name: "Cricbuzz"
+      url: "https://www.cricbuzz.com/api/html/cricket-news.xml"
+      tier: "tier_2"
+    - name: "BBC Sport - Cricket"
+      url: "https://feeds.bbci.co.uk/sport/cricket/rss.xml"
+      tier: "tier_2"
+
+  f1:
+    - name: "Formula 1 Official"
+      url: "https://www.formula1.com/en/latest/all.xml"
+      tier: "tier_1"
+    - name: "Autosport F1"
+      url: "https://www.autosport.com/rss/f1/news/"
+      tier: "tier_2"
+    - name: "Motorsport.com F1"
+      url: "https://www.motorsport.com/rss/f1/news/"
+      tier: "tier_2"
+    - name: "BBC Sport - Formula 1"
+      url: "https://feeds.bbci.co.uk/sport/formula1/rss.xml"
+      tier: "tier_2"
+
+reddit_subreddits:
+  football: "soccer"
+  cricket: "Cricket"
+  f1: "formula1"
