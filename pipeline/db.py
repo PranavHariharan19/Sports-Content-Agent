@@ -15,9 +15,11 @@ from schemas.common import (
     SourceTier,
     SportType,
     StageName,
+    VerificationVerdict,
 )
 from schemas.facts import ConflictRecord, ExtractedFact
 from schemas.job import JobRecord, StageRunRecord
+from schemas.script import BeatType, GeneratedScript, ScriptBeat
 from schemas.sources import StoredSource
 
 logger = get_logger(__name__)
@@ -120,6 +122,24 @@ CREATE TABLE IF NOT EXISTS conflicts (
     FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS scripts (
+    script_id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    headline TEXT NOT NULL,
+    beats_json TEXT NOT NULL,
+    total_words INTEGER NOT NULL,
+    estimated_duration_seconds REAL NOT NULL,
+    model_used TEXT NOT NULL,
+    verifier_model_used TEXT NOT NULL,
+    lint_passed INTEGER NOT NULL,
+    all_supported INTEGER NOT NULL,
+    is_approved INTEGER NOT NULL DEFAULT 0,
+    approved_at TEXT,
+    override_logs_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_stage_runs_job_id ON stage_runs(job_id);
 CREATE INDEX IF NOT EXISTS idx_llm_cache_provider ON llm_cache(provider, model);
@@ -128,6 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_sources_syndication ON sources(syndication_cluste
 CREATE INDEX IF NOT EXISTS idx_facts_job_id ON facts(job_id);
 CREATE INDEX IF NOT EXISTS idx_facts_status ON facts(corroboration_status);
 CREATE INDEX IF NOT EXISTS idx_conflicts_job_id ON conflicts(job_id);
+CREATE INDEX IF NOT EXISTS idx_scripts_job_id ON scripts(job_id);
 """
 
 
@@ -478,6 +499,11 @@ class DatabaseManager:
             )
         logger.debug("Stored fact %s for job %s: status=%s", fact.fact_id, fact.job_id, fact.corroboration_status.value)
 
+    def save_facts(self, facts: List[ExtractedFact]) -> None:
+        """Store multiple extracted facts in SQLite."""
+        for fact in facts:
+            self.save_fact(fact)
+
     def get_facts_for_job(self, job_id: str, include_discarded: bool = False) -> List[ExtractedFact]:
         """Retrieve extracted facts for a job."""
         with self.get_connection() as conn:
@@ -667,5 +693,146 @@ class DatabaseManager:
                 (chosen_fact_id,),
             )
             return cursor.rowcount > 0
+
+    # --- Script Operations ---
+
+    def save_script(self, script: GeneratedScript) -> None:
+        """Store or update a generated script in SQLite."""
+        beats_json = json.dumps([b.model_dump(mode="json") for b in script.beats], ensure_ascii=False)
+        override_json = json.dumps(script.override_logs, ensure_ascii=False)
+
+        with self.get_connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO scripts (
+                    script_id, job_id, headline, beats_json, total_words,
+                    estimated_duration_seconds, model_used, verifier_model_used,
+                    lint_passed, all_supported, is_approved, approved_at,
+                    override_logs_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    script.script_id,
+                    script.job_id,
+                    script.headline,
+                    beats_json,
+                    script.total_words,
+                    script.estimated_duration_seconds,
+                    script.model_used,
+                    script.verifier_model_used,
+                    1 if script.lint_passed else 0,
+                    1 if script.all_supported else 0,
+                    1 if script.is_approved else 0,
+                    script.approved_at,
+                    override_json,
+                    script.created_at,
+                ),
+            )
+        logger.debug("Saved script %s for job %s: approved=%s", script.script_id, script.job_id, script.is_approved)
+
+    def get_script_for_job(self, job_id: str) -> Optional[GeneratedScript]:
+        """Retrieve the latest script for a job."""
+        with self.get_connection() as conn:
+            r = conn.execute(
+                """
+                SELECT script_id, job_id, headline, beats_json, total_words,
+                       estimated_duration_seconds, model_used, verifier_model_used,
+                       lint_passed, all_supported, is_approved, approved_at,
+                       override_logs_json, created_at
+                FROM scripts
+                WHERE job_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (job_id,),
+            ).fetchone()
+            if not r:
+                return None
+
+            try:
+                raw_beats = json.loads(r["beats_json"])
+                beats = [ScriptBeat.model_validate(b) for b in raw_beats]
+            except Exception:
+                beats = []
+
+            try:
+                overrides = json.loads(r["override_logs_json"])
+            except Exception:
+                overrides = []
+
+            return GeneratedScript(
+                script_id=r["script_id"],
+                job_id=r["job_id"],
+                headline=r["headline"],
+                beats=beats,
+                total_words=r["total_words"],
+                estimated_duration_seconds=r["estimated_duration_seconds"],
+                model_used=r["model_used"],
+                verifier_model_used=r["verifier_model_used"],
+                lint_passed=bool(r["lint_passed"]),
+                all_supported=bool(r["all_supported"]),
+                is_approved=bool(r["is_approved"]),
+                approved_at=r["approved_at"],
+                override_logs=overrides,
+                created_at=r["created_at"],
+            )
+
+    def approve_script(self, job_id: str) -> bool:
+        """Mark the script for a job as approved by human reviewer."""
+        now = datetime.now(timezone.utc).isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE scripts
+                SET is_approved = 1, approved_at = ?
+                WHERE job_id = ?
+                """,
+                (now, job_id),
+            )
+            return cursor.rowcount > 0
+
+    def record_beat_override(
+        self,
+        job_id: str,
+        beat_id: int,
+        action: str,
+        reason: str,
+        edited_text: Optional[str] = None,
+    ) -> Optional[GeneratedScript]:
+        """Record an explicit human override on a script beat with provenance logging."""
+        script = self.get_script_for_job(job_id)
+        if not script:
+            return None
+
+        now = datetime.now(timezone.utc).isoformat()
+        override_entry = {
+            "timestamp": now,
+            "beat_id": beat_id,
+            "action": action,
+            "reason": reason,
+            "edited_text": edited_text,
+        }
+
+        for beat in script.beats:
+            if beat.beat_id == beat_id:
+                beat.human_override = True
+                beat.human_override_reason = reason
+                if action == "approve":
+                    beat.verifier_verdict = VerificationVerdict.SUPPORTED
+                    beat.lint_errors = []
+                elif action == "edit" and edited_text:
+                    beat.spoken_text = edited_text.strip()
+                    beat.word_count = len(beat.spoken_text.split())
+                    beat.estimated_duration_seconds = round(beat.word_count / 2.5, 1)
+                    beat.verifier_verdict = VerificationVerdict.SUPPORTED
+                    beat.lint_errors = []
+                elif action == "reject":
+                    beat.verifier_verdict = VerificationVerdict.CONTRADICTED
+
+        script.override_logs.append(override_entry)
+        self.save_script(script)
+        logger.info("Recorded human override on beat %d for job %s: action=%s, reason=%s", beat_id, job_id, action, reason)
+        return self.get_script_for_job(job_id)
+
 
 

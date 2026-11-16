@@ -37,11 +37,39 @@
       <div class="flex items-center space-x-3">
         <span class="text-xl">🎯</span>
         <div>
-          <div class="font-semibold text-sm">Checkpoint 1: Topic Selected!</div>
+          <div id="checkpointTitle" class="font-semibold text-sm">Checkpoint 1: Topic Selected!</div>
           <div id="selectedTopicTitle" class="text-xs text-cyan-300">Ready for Stage 3: Source Verification</div>
         </div>
       </div>
-      <span class="text-xs px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 font-mono">STATUS: TOPIC_CHOSEN</span>
+      <div class="flex items-center space-x-3">
+        <button id="nextStageBtn" onclick="runSourceAndScriptPipeline()" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition shadow">
+          Draft & Verify Script &rarr;
+        </button>
+        <span id="checkpointStatusBadge" class="text-xs px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 font-mono">STATUS: TOPIC_CHOSEN</span>
+      </div>
+    </div>
+
+    <!-- Script Review View (Checkpoint 2) -->
+    <div id="scriptReviewSection" class="hidden mb-8 space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-100 flex items-center space-x-2">
+            <span>📝 Checkpoint 2: Script Review & Provenance</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Each sentence is paired with exact evidence quotes and independent verifier verdicts.</p>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="text-xs text-slate-400 font-mono bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
+            Duration: <strong id="scriptDuration" class="text-emerald-400">0s</strong> &bull; Words: <strong id="scriptWords" class="text-emerald-400">0</strong>
+          </div>
+          <button id="approveScriptBtn" onclick="approveScript()" class="px-5 py-2 rounded-xl text-sm font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition shadow-lg disabled:opacity-40 disabled:cursor-not-allowed">
+            Approve Script &rarr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Beats List Container -->
+      <div id="scriptBeatsList" class="space-y-4"></div>
     </div>
 
     <!-- Controls Bar -->
@@ -100,8 +128,177 @@
   </main>
 
   <script>
-    let currentSport = 'football';
-    let currentJobId = null;
+    let currentFactsById = {};
+    let currentScript = null;
+
+    async function runSourceAndScriptPipeline() {
+      if (!currentJobId) return;
+      const nextBtn = document.getElementById('nextStageBtn');
+      nextBtn.disabled = true;
+      nextBtn.textContent = 'Fetching Sources & Extracting Facts...';
+
+      try {
+        // 1. Fetch sources
+        const srcRes = await fetch(`/api/jobs/${currentJobId}/fetch-sources`, { method: 'POST' });
+        if (!srcRes.ok) throw new Error(await srcRes.text());
+
+        // 2. Extract facts
+        nextBtn.textContent = 'Verifying Evidence & Grounding...';
+        const factsRes = await fetch(`/api/jobs/${currentJobId}/extract-facts`, { method: 'POST' });
+        if (!factsRes.ok) throw new Error(await factsRes.text());
+        const ledger = await factsRes.json();
+        currentFactsById = {};
+        (ledger.facts || []).forEach(f => { currentFactsById[f.fact_id] = f; });
+
+        // 3. Draft & verify script
+        nextBtn.textContent = 'Drafting & Running Verifier Judge...';
+        const scrRes = await fetch(`/api/jobs/${currentJobId}/draft-script`, { method: 'POST' });
+        if (!scrRes.ok) throw new Error(await scrRes.text());
+        currentScript = await scrRes.json();
+
+        updateJobBadge(currentJobId, 'SCRIPT_DRAFTED');
+        document.getElementById('checkpointStatusBadge').textContent = 'STATUS: SCRIPT_DRAFTED';
+        document.getElementById('checkpointTitle').textContent = 'Script Generated & Verified';
+        document.getElementById('selectedTopicTitle').textContent = 'Review each sentence and cited evidence quotes below.';
+        nextBtn.classList.add('hidden');
+
+        renderScriptReview(currentScript);
+      } catch (err) {
+        alert('Script pipeline error: ' + err.message);
+      } finally {
+        nextBtn.disabled = false;
+        nextBtn.textContent = 'Draft & Verify Script →';
+      }
+    }
+
+    function renderScriptReview(script) {
+      const section = document.getElementById('scriptReviewSection');
+      const list = document.getElementById('scriptBeatsList');
+      const approveBtn = document.getElementById('approveScriptBtn');
+
+      document.getElementById('scriptDuration').textContent = `${script.estimated_duration_seconds}s`;
+      document.getElementById('scriptWords').textContent = script.total_words;
+      section.classList.remove('hidden');
+      list.innerHTML = '';
+
+      let canApprove = true;
+
+      script.beats.forEach((b) => {
+        const beatCard = document.createElement('div');
+        const isSupported = b.verifier_verdict === 'SUPPORTED' || b.human_override;
+        const hasLintErrors = (b.lint_errors && b.lint_errors.length > 0) && !b.human_override;
+
+        if (!isSupported || hasLintErrors) canApprove = false;
+
+        let borderColor = 'border-emerald-500/40 bg-emerald-950/10';
+        let verdictBadge = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        if (!isSupported) {
+          borderColor = 'border-rose-500/50 bg-rose-950/20';
+          verdictBadge = 'bg-rose-500/20 text-rose-400 border border-rose-500/30';
+        } else if (hasLintErrors) {
+          borderColor = 'border-amber-500/50 bg-amber-950/20';
+          verdictBadge = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+        }
+
+        const evidenceCards = (b.cited_fact_ids || []).map(fid => {
+          const f = currentFactsById[fid];
+          if (!f) return `<span class="text-xs text-slate-500 font-mono">[${fid}]</span>`;
+          return `
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs space-y-1">
+              <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                <span>Fact: <strong class="text-slate-200">${f.fact_id}</strong> (${f.fact_type})</span>
+                <span class="px-1.5 py-0.5 rounded bg-blue-950 text-blue-300">${f.source_tier}</span>
+              </div>
+              <div class="text-slate-200 font-medium">"${f.claim}"</div>
+              <div class="text-slate-400 italic font-mono text-[11px]">Quote: "${f.evidence_quote}"</div>
+            </div>
+          `;
+        }).join('');
+
+        beatCard.className = `p-4 rounded-xl border ${borderColor} transition space-y-3`;
+        beatCard.innerHTML = `
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 space-y-1">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">Beat #${b.beat_id}</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase font-mono">${b.beat_type}</span>
+                <span class="text-xs px-2 py-0.5 rounded font-mono ${verdictBadge}">${b.verifier_verdict}</span>
+                ${b.human_override ? '<span class="text-xs px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-mono border border-purple-700/40">OVERRIDDEN</span>' : ''}
+              </div>
+              <p class="text-base text-slate-100 font-semibold pt-1">"${b.spoken_text}"</p>
+              ${b.verifier_reason ? `<p class="text-xs text-slate-400"><strong>Verifier reason:</strong> ${b.verifier_reason}</p>` : ''}
+              ${hasLintErrors ? `<div class="p-2 bg-rose-950/60 border border-rose-800 text-rose-300 text-xs rounded font-mono">⚠️ Lint Error: ${b.lint_errors.join('; ')}</div>` : ''}
+            </div>
+            <div>
+              <button onclick="overrideBeatPrompt(${b.beat_id})" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                Override / Edit
+              </button>
+            </div>
+          </div>
+
+          <!-- Evidence Provenance -->
+          ${evidenceCards ? `<div class="mt-3 pt-3 border-t border-slate-800 space-y-2"><div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cited Evidence Provenance:</div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">${evidenceCards}</div></div>` : ''}
+        `;
+        list.appendChild(beatCard);
+      });
+
+      approveBtn.disabled = !canApprove;
+      if (!canApprove) {
+        approveBtn.title = "All beats must be verified as SUPPORTED or overridden by human review";
+      } else {
+        approveBtn.title = "Approve script and proceed to Milestone 6/7";
+      }
+    }
+
+    async function overrideBeatPrompt(beatId) {
+      const beat = (currentScript.beats || []).find(b => b.beat_id === beatId);
+      if (!beat) return;
+
+      const newText = prompt(`Edit spoken sentence for Beat #${beatId}:`, beat.spoken_text);
+      if (newText === null) return;
+
+      const reason = prompt("Enter required reason for overriding automated verification:", "Verified manually against source text");
+      if (!reason) return;
+
+      try {
+        const res = await fetch(`/api/jobs/${currentJobId}/override-beat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            beat_id: beatId,
+            action: newText !== beat.spoken_text ? 'edit' : 'approve',
+            edited_text: newText,
+            override_reason: reason
+          })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        currentScript = await res.json();
+        renderScriptReview(currentScript);
+      } catch (err) {
+        alert('Override failed: ' + err.message);
+      }
+    }
+
+    async function approveScript() {
+      if (!currentJobId) return;
+      if (!confirm("Approve this script for voice generation and video rendering (Checkpoint 2)?")) return;
+
+      try {
+        const res = await fetch(`/api/jobs/${currentJobId}/approve-script`, { method: 'POST' });
+        if (!res.ok) throw new Error(await res.text());
+        const approved = await res.json();
+
+        updateJobBadge(currentJobId, 'SCRIPT_APPROVED');
+        document.getElementById('checkpointStatusBadge').textContent = 'STATUS: SCRIPT_APPROVED';
+        document.getElementById('checkpointTitle').textContent = 'Checkpoint 2 Completed: Script Approved!';
+        document.getElementById('selectedTopicTitle').textContent = 'Script locked. Ready for Milestone 7: Voice, Timestamps & Captions.';
+        document.getElementById('approveScriptBtn').disabled = true;
+        document.getElementById('approveScriptBtn').textContent = 'Approved ✓';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        alert('Script approval failed: ' + err.message);
+      }
+    }
 
     function setSport(sport) {
       currentSport = sport;

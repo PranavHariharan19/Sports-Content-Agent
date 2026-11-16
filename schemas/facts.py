@@ -38,6 +38,7 @@ class ExtractedFact(BaseModel):
         normalized_entities: Optional[List[str]] = None,
         normalized_value: Optional[str] = None,
         published_at: Optional[str] = None,
+        corroboration_status: CorroborationStatus = CorroborationStatus.UNVERIFIED,
     ) -> "ExtractedFact":
         """Generate a deterministic fact_id from claim and source."""
         raw_key = f"{claim.strip().lower()}|{evidence_quote.strip().lower()}|{source_id}"
@@ -53,6 +54,7 @@ class ExtractedFact(BaseModel):
             evidence_quote=evidence_quote.strip(),
             source_tier=source_tier,
             published_at=published_at,
+            corroboration_status=corroboration_status,
         )
 
 

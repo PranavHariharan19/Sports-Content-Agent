@@ -18,6 +18,7 @@ from schemas.discovery import (
 from schemas.facts import ConflictRecord, ExtractedFact, FactLedger, ResolveConflictRequest
 from schemas.job import JobRecord, StageRunRecord
 from schemas.llm import LLMCacheRecord, LLMRequest, LLMResponse, LLMUsageRecord, TokenUsage
+from schemas.script import BeatOverrideRequest, BeatType, GeneratedScript, ScriptApproveRequest, ScriptBeat
 from schemas.sources import SourceFetchResult, StoredSource
 
 __all__ = [
@@ -46,6 +47,11 @@ __all__ = [
     "ConflictRecord",
     "FactLedger",
     "ResolveConflictRequest",
+    "BeatType",
+    "ScriptBeat",
+    "GeneratedScript",
+    "BeatOverrideRequest",
+    "ScriptApproveRequest",
     "LLMCacheRecord",
     "LLMRequest",
     "LLMResponse",
