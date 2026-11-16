@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.api.discovery import router as discovery_router
+from app.api.sources import router as sources_router
 from app.logging_config import get_logger, setup_logging
 from pipeline.db import DatabaseManager
 from pipeline.state_machine import PipelineStateMachine
@@ -56,6 +57,7 @@ def create_app(config: Optional[RootConfig] = None) -> FastAPI:
 
     # Register API routers
     app.include_router(discovery_router)
+    app.include_router(sources_router)
 
     @app.get("/", response_class=HTMLResponse)
     @app.get("/ui", response_class=HTMLResponse)

@@ -8,8 +8,9 @@ from typing import Any, Dict, Generator, List, Optional
 from pydantic import BaseModel
 
 from app.logging_config import get_logger
-from schemas.common import JobStatus, SportType, StageName
+from schemas.common import JobStatus, SourceTier, SportType, StageName
 from schemas.job import JobRecord, StageRunRecord
+from schemas.sources import StoredSource
 
 logger = get_logger(__name__)
 
@@ -55,9 +56,30 @@ CREATE TABLE IF NOT EXISTS llm_usage (
     PRIMARY KEY (usage_date, provider, model)
 );
 
+CREATE TABLE IF NOT EXISTS sources (
+    source_id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    url TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    source_tier TEXT NOT NULL,
+    is_allowlisted INTEGER NOT NULL DEFAULT 1,
+    title TEXT,
+    cleaned_text TEXT NOT NULL,
+    text_hash TEXT NOT NULL,
+    published_at TEXT,
+    fetched_at TEXT NOT NULL,
+    syndication_cluster_id TEXT,
+    is_syndicated INTEGER NOT NULL DEFAULT 0,
+    char_count INTEGER NOT NULL DEFAULT 0,
+    word_count INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_stage_runs_job_id ON stage_runs(job_id);
 CREATE INDEX IF NOT EXISTS idx_llm_cache_provider ON llm_cache(provider, model);
+CREATE INDEX IF NOT EXISTS idx_sources_job_id ON sources(job_id);
+CREATE INDEX IF NOT EXISTS idx_sources_syndication ON sources(syndication_cluster_id);
 """
 
 
@@ -258,3 +280,110 @@ class DatabaseManager:
                 status=row["status"],
                 created_at=row["created_at"],
             )
+
+    # --- Source Operations ---
+
+    def save_source(self, source: StoredSource) -> None:
+        """Store or update a ground-truth article source in SQLite."""
+        with self.get_connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO sources (
+                    source_id, job_id, url, domain, source_tier, is_allowlisted,
+                    title, cleaned_text, text_hash, published_at, fetched_at,
+                    syndication_cluster_id, is_syndicated, char_count, word_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    source.source_id,
+                    source.job_id,
+                    source.url,
+                    source.domain,
+                    source.source_tier.value,
+                    1 if source.is_allowlisted else 0,
+                    source.title,
+                    source.cleaned_text,
+                    source.text_hash,
+                    source.published_at,
+                    source.fetched_at,
+                    source.syndication_cluster_id,
+                    1 if source.is_syndicated else 0,
+                    source.char_count,
+                    source.word_count,
+                ),
+            )
+        logger.debug("Stored source %s (%s, %d words) for job %s", source.source_id, source.domain, source.word_count, source.job_id)
+
+    def get_sources_for_job(self, job_id: str) -> List[StoredSource]:
+        """Retrieve all stored sources for a job."""
+        with self.get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT source_id, job_id, url, domain, source_tier, is_allowlisted,
+                       title, cleaned_text, text_hash, published_at, fetched_at,
+                       syndication_cluster_id, is_syndicated, char_count, word_count
+                FROM sources
+                WHERE job_id = ?
+                ORDER BY is_allowlisted DESC, source_tier ASC
+                """,
+                (job_id,),
+            ).fetchall()
+            return [
+                StoredSource(
+                    source_id=r["source_id"],
+                    job_id=r["job_id"],
+                    url=r["url"],
+                    domain=r["domain"],
+                    source_tier=SourceTier(r["source_tier"]),
+                    is_allowlisted=bool(r["is_allowlisted"]),
+                    title=r["title"],
+                    cleaned_text=r["cleaned_text"],
+                    text_hash=r["text_hash"],
+                    published_at=r["published_at"],
+                    fetched_at=r["fetched_at"],
+                    syndication_cluster_id=r["syndication_cluster_id"],
+                    is_syndicated=bool(r["is_syndicated"]),
+                    char_count=r["char_count"],
+                    word_count=r["word_count"],
+                )
+                for r in rows
+            ]
+
+    def get_source(self, source_id: str) -> Optional[StoredSource]:
+        """Retrieve a specific stored source by ID."""
+        with self.get_connection() as conn:
+            r = conn.execute(
+                """
+                SELECT source_id, job_id, url, domain, source_tier, is_allowlisted,
+                       title, cleaned_text, text_hash, published_at, fetched_at,
+                       syndication_cluster_id, is_syndicated, char_count, word_count
+                FROM sources
+                WHERE source_id = ?
+                """,
+                (source_id,),
+            ).fetchone()
+            if not r:
+                return None
+            return StoredSource(
+                source_id=r["source_id"],
+                job_id=r["job_id"],
+                url=r["url"],
+                domain=r["domain"],
+                source_tier=SourceTier(r["source_tier"]),
+                is_allowlisted=bool(r["is_allowlisted"]),
+                title=r["title"],
+                cleaned_text=r["cleaned_text"],
+                text_hash=r["text_hash"],
+                published_at=r["published_at"],
+                fetched_at=r["fetched_at"],
+                syndication_cluster_id=r["syndication_cluster_id"],
+                is_syndicated=bool(r["is_syndicated"]),
+                char_count=r["char_count"],
+                word_count=r["word_count"],
+            )
+
+    def get_allowlisted_sources_for_job(self, job_id: str) -> List[StoredSource]:
+        """Retrieve only allowlisted sources capable of backing factual claims."""
+        all_sources = self.get_sources_for_job(job_id)
+        return [s for s in all_sources if s.is_allowlisted]
+

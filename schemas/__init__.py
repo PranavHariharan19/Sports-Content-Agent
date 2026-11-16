@@ -17,6 +17,7 @@ from schemas.discovery import (
 )
 from schemas.job import JobRecord, StageRunRecord
 from schemas.llm import LLMCacheRecord, LLMRequest, LLMResponse, LLMUsageRecord, TokenUsage
+from schemas.sources import SourceFetchResult, StoredSource
 
 __all__ = [
     "CorroborationStatus",
@@ -38,6 +39,8 @@ __all__ = [
     "StoryCluster",
     "DiscoveryRunResult",
     "ChooseTopicRequest",
+    "StoredSource",
+    "SourceFetchResult",
     "LLMCacheRecord",
     "LLMRequest",
     "LLMResponse",
