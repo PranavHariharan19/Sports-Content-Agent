@@ -15,6 +15,7 @@ from schemas.discovery import (
     StoryCluster,
     ViralityBreakdown,
 )
+from schemas.facts import ConflictRecord, ExtractedFact, FactLedger, ResolveConflictRequest
 from schemas.job import JobRecord, StageRunRecord
 from schemas.llm import LLMCacheRecord, LLMRequest, LLMResponse, LLMUsageRecord, TokenUsage
 from schemas.sources import SourceFetchResult, StoredSource
@@ -41,6 +42,10 @@ __all__ = [
     "ChooseTopicRequest",
     "StoredSource",
     "SourceFetchResult",
+    "ExtractedFact",
+    "ConflictRecord",
+    "FactLedger",
+    "ResolveConflictRequest",
     "LLMCacheRecord",
     "LLMRequest",
     "LLMResponse",

@@ -8,7 +8,15 @@ from typing import Any, Dict, Generator, List, Optional
 from pydantic import BaseModel
 
 from app.logging_config import get_logger
-from schemas.common import JobStatus, SourceTier, SportType, StageName
+from schemas.common import (
+    CorroborationStatus,
+    FactType,
+    JobStatus,
+    SourceTier,
+    SportType,
+    StageName,
+)
+from schemas.facts import ConflictRecord, ExtractedFact
 from schemas.job import JobRecord, StageRunRecord
 from schemas.sources import StoredSource
 
@@ -75,11 +83,51 @@ CREATE TABLE IF NOT EXISTS sources (
     FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS facts (
+    fact_id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    claim TEXT NOT NULL,
+    fact_type TEXT NOT NULL,
+    normalized_entities_json TEXT NOT NULL DEFAULT '[]',
+    normalized_value TEXT,
+    source_id TEXT NOT NULL,
+    evidence_quote TEXT NOT NULL,
+    source_tier TEXT NOT NULL,
+    published_at TEXT,
+    corroborating_sources_json TEXT NOT NULL DEFAULT '[]',
+    corroboration_status TEXT NOT NULL,
+    requires_attribution INTEGER NOT NULL DEFAULT 0,
+    attribution_outlet TEXT,
+    is_hedged INTEGER NOT NULL DEFAULT 0,
+    is_temporal INTEGER NOT NULL DEFAULT 0,
+    is_conflicted INTEGER NOT NULL DEFAULT 0,
+    discard_reason TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE,
+    FOREIGN KEY (source_id) REFERENCES sources(source_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS conflicts (
+    conflict_id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    entity_or_topic TEXT NOT NULL,
+    fact_ids_json TEXT NOT NULL,
+    conflicting_values_json TEXT NOT NULL,
+    sources_json TEXT NOT NULL,
+    resolved INTEGER NOT NULL DEFAULT 0,
+    chosen_fact_id TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_stage_runs_job_id ON stage_runs(job_id);
 CREATE INDEX IF NOT EXISTS idx_llm_cache_provider ON llm_cache(provider, model);
 CREATE INDEX IF NOT EXISTS idx_sources_job_id ON sources(job_id);
 CREATE INDEX IF NOT EXISTS idx_sources_syndication ON sources(syndication_cluster_id);
+CREATE INDEX IF NOT EXISTS idx_facts_job_id ON facts(job_id);
+CREATE INDEX IF NOT EXISTS idx_facts_status ON facts(corroboration_status);
+CREATE INDEX IF NOT EXISTS idx_conflicts_job_id ON conflicts(job_id);
 """
 
 
@@ -386,4 +434,238 @@ class DatabaseManager:
         """Retrieve only allowlisted sources capable of backing factual claims."""
         all_sources = self.get_sources_for_job(job_id)
         return [s for s in all_sources if s.is_allowlisted]
+
+    # --- Fact & Conflict Operations ---
+
+    def save_fact(self, fact: ExtractedFact) -> None:
+        """Store or update an extracted fact in SQLite."""
+        now = datetime.now(timezone.utc).isoformat()
+        entities_json = json.dumps(fact.normalized_entities, ensure_ascii=False)
+        corroborating_json = json.dumps(fact.corroborating_source_ids, ensure_ascii=False)
+
+        with self.get_connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO facts (
+                    fact_id, job_id, claim, fact_type, normalized_entities_json,
+                    normalized_value, source_id, evidence_quote, source_tier,
+                    published_at, corroborating_sources_json, corroboration_status,
+                    requires_attribution, attribution_outlet, is_hedged, is_temporal,
+                    is_conflicted, discard_reason, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    fact.fact_id,
+                    fact.job_id,
+                    fact.claim,
+                    fact.fact_type.value,
+                    entities_json,
+                    fact.normalized_value,
+                    fact.source_id,
+                    fact.evidence_quote,
+                    fact.source_tier.value,
+                    fact.published_at,
+                    corroborating_json,
+                    fact.corroboration_status.value,
+                    1 if fact.requires_attribution else 0,
+                    fact.attribution_outlet,
+                    1 if fact.is_hedged else 0,
+                    1 if fact.is_temporal else 0,
+                    1 if fact.is_conflicted else 0,
+                    fact.discard_reason,
+                    now,
+                ),
+            )
+        logger.debug("Stored fact %s for job %s: status=%s", fact.fact_id, fact.job_id, fact.corroboration_status.value)
+
+    def get_facts_for_job(self, job_id: str, include_discarded: bool = False) -> List[ExtractedFact]:
+        """Retrieve extracted facts for a job."""
+        with self.get_connection() as conn:
+            query = """
+                SELECT fact_id, job_id, claim, fact_type, normalized_entities_json,
+                       normalized_value, source_id, evidence_quote, source_tier,
+                       published_at, corroborating_sources_json, corroboration_status,
+                       requires_attribution, attribution_outlet, is_hedged, is_temporal,
+                       is_conflicted, discard_reason, created_at
+                FROM facts
+                WHERE job_id = ?
+            """
+            if not include_discarded:
+                query += " AND discard_reason IS NULL"
+            query += " ORDER BY corroboration_status ASC, fact_id ASC"
+
+            rows = conn.execute(query, (job_id,)).fetchall()
+            facts: List[ExtractedFact] = []
+            for r in rows:
+                try:
+                    ents = json.loads(r["normalized_entities_json"])
+                except Exception:
+                    ents = []
+                try:
+                    corrobs = json.loads(r["corroborating_sources_json"])
+                except Exception:
+                    corrobs = []
+
+                facts.append(
+                    ExtractedFact(
+                        fact_id=r["fact_id"],
+                        job_id=r["job_id"],
+                        claim=r["claim"],
+                        fact_type=FactType(r["fact_type"]),
+                        normalized_entities=ents,
+                        normalized_value=r["normalized_value"],
+                        source_id=r["source_id"],
+                        evidence_quote=r["evidence_quote"],
+                        source_tier=SourceTier(r["source_tier"]),
+                        published_at=r["published_at"],
+                        corroborating_source_ids=corrobs,
+                        corroboration_status=CorroborationStatus(r["corroboration_status"]),
+                        requires_attribution=bool(r["requires_attribution"]),
+                        attribution_outlet=r["attribution_outlet"],
+                        is_hedged=bool(r["is_hedged"]),
+                        is_temporal=bool(r["is_temporal"]),
+                        is_conflicted=bool(r["is_conflicted"]),
+                        discard_reason=r["discard_reason"],
+                    )
+                )
+            return facts
+
+    def get_fact(self, fact_id: str) -> Optional[ExtractedFact]:
+        """Retrieve a specific fact by ID."""
+        with self.get_connection() as conn:
+            r = conn.execute(
+                """
+                SELECT fact_id, job_id, claim, fact_type, normalized_entities_json,
+                       normalized_value, source_id, evidence_quote, source_tier,
+                       published_at, corroborating_sources_json, corroboration_status,
+                       requires_attribution, attribution_outlet, is_hedged, is_temporal,
+                       is_conflicted, discard_reason, created_at
+                FROM facts
+                WHERE fact_id = ?
+                """,
+                (fact_id,),
+            ).fetchone()
+            if not r:
+                return None
+
+            try:
+                ents = json.loads(r["normalized_entities_json"])
+            except Exception:
+                ents = []
+            try:
+                corrobs = json.loads(r["corroborating_sources_json"])
+            except Exception:
+                corrobs = []
+
+            return ExtractedFact(
+                fact_id=r["fact_id"],
+                job_id=r["job_id"],
+                claim=r["claim"],
+                fact_type=FactType(r["fact_type"]),
+                normalized_entities=ents,
+                normalized_value=r["normalized_value"],
+                source_id=r["source_id"],
+                evidence_quote=r["evidence_quote"],
+                source_tier=SourceTier(r["source_tier"]),
+                published_at=r["published_at"],
+                corroborating_source_ids=corrobs,
+                corroboration_status=CorroborationStatus(r["corroboration_status"]),
+                requires_attribution=bool(r["requires_attribution"]),
+                attribution_outlet=r["attribution_outlet"],
+                is_hedged=bool(r["is_hedged"]),
+                is_temporal=bool(r["is_temporal"]),
+                is_conflicted=bool(r["is_conflicted"]),
+                discard_reason=r["discard_reason"],
+            )
+
+    def save_conflict(self, conflict: ConflictRecord) -> None:
+        """Store a detected fact conflict in SQLite."""
+        with self.get_connection() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO conflicts (
+                    conflict_id, job_id, entity_or_topic, fact_ids_json,
+                    conflicting_values_json, sources_json, resolved,
+                    chosen_fact_id, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    conflict.conflict_id,
+                    conflict.job_id,
+                    conflict.entity_or_topic,
+                    json.dumps(conflict.fact_ids, ensure_ascii=False),
+                    json.dumps(conflict.conflicting_values, ensure_ascii=False),
+                    json.dumps(conflict.sources, ensure_ascii=False),
+                    1 if conflict.resolved else 0,
+                    conflict.chosen_fact_id,
+                    conflict.created_at,
+                ),
+            )
+        logger.info("Saved conflict %s for job %s (topic: %s)", conflict.conflict_id, conflict.job_id, conflict.entity_or_topic)
+
+    def get_conflicts_for_job(self, job_id: str) -> List[ConflictRecord]:
+        """Retrieve all conflict records for a job."""
+        with self.get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT conflict_id, job_id, entity_or_topic, fact_ids_json,
+                       conflicting_values_json, sources_json, resolved,
+                       chosen_fact_id, created_at
+                FROM conflicts
+                WHERE job_id = ?
+                """,
+                (job_id,),
+            ).fetchall()
+            conflicts: List[ConflictRecord] = []
+            for r in rows:
+                try:
+                    fids = json.loads(r["fact_ids_json"])
+                except Exception:
+                    fids = []
+                try:
+                    vals = json.loads(r["conflicting_values_json"])
+                except Exception:
+                    vals = []
+                try:
+                    srcs = json.loads(r["sources_json"])
+                except Exception:
+                    srcs = []
+
+                conflicts.append(
+                    ConflictRecord(
+                        conflict_id=r["conflict_id"],
+                        job_id=r["job_id"],
+                        entity_or_topic=r["entity_or_topic"],
+                        fact_ids=fids,
+                        conflicting_values=vals,
+                        sources=srcs,
+                        resolved=bool(r["resolved"]),
+                        chosen_fact_id=r["chosen_fact_id"],
+                        created_at=r["created_at"],
+                    )
+                )
+            return conflicts
+
+    def resolve_conflict(self, conflict_id: str, chosen_fact_id: str) -> bool:
+        """Resolve a conflict record by marking chosen winning fact ID."""
+        with self.get_connection() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE conflicts
+                SET resolved = 1, chosen_fact_id = ?
+                WHERE conflict_id = ?
+                """,
+                (chosen_fact_id, conflict_id),
+            )
+            # Update the winning fact to mark is_conflicted = 0
+            conn.execute(
+                """
+                UPDATE facts
+                SET is_conflicted = 0
+                WHERE fact_id = ?
+                """,
+                (chosen_fact_id,),
+            )
+            return cursor.rowcount > 0
+
 
