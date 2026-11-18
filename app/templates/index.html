@@ -72,6 +72,130 @@
       <div id="scriptBeatsList" class="space-y-4"></div>
     </div>
 
+    <!-- Voice & Subtitles Section (Milestone 7) -->
+    <div id="voiceSection" class="hidden mb-8 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between pb-4 border-b border-slate-800 gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-100 flex items-center space-x-2">
+            <span>🎙️ Voiceover & Subtitle Captions</span>
+            <span class="text-xs px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono border border-cyan-500/30">Milestone 7</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Natural commentator voice synthesis paired with 9:16 vertical word-by-word highlighted ASS captions.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Voice Selector Dropdown -->
+          <div class="flex items-center space-x-2">
+            <label for="voiceSelect" class="text-xs text-slate-400 font-semibold">Voice:</label>
+            <select id="voiceSelect" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 font-medium focus:outline-none focus:border-cyan-400">
+              <option value="en-GB-RyanNeural" selected>Ryan (UK - Authority / Commentator)</option>
+              <option value="en-GB-ThomasNeural">Thomas (UK - Fast & Energetic)</option>
+              <option value="en-US-ChristopherNeural">Christopher (US - Confident)</option>
+              <option value="en-US-GuyNeural">Guy (US - Broadcast Anchor)</option>
+              <option value="en-AU-WilliamNeural">William (AU - Energetic Cricket)</option>
+              <option value="en-GB-SoniaNeural">Sonia (UK - Studio Anchor)</option>
+            </select>
+          </div>
+          <button id="generateVoiceBtn" onclick="generateVoiceAndCaptions()" class="flex items-center space-x-2 px-5 py-2 rounded-xl text-sm font-bold bg-cyan-400 text-slate-950 hover:bg-cyan-300 active:scale-95 transition shadow-lg">
+            <span id="generateVoiceIcon">⚡</span>
+            <span id="generateVoiceText">Generate Voice & Captions</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Generated Voice Preview Container -->
+      <div id="voicePreviewContainer" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left Side: Player & Stats & Downloads (7 cols) -->
+        <div class="lg:col-span-7 space-y-4">
+          <!-- Audio Player Card -->
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span class="font-semibold text-slate-300 flex items-center gap-2">
+                <span>🔊</span> Broadcast Audio Track
+              </span>
+              <span id="voiceBadge" class="font-mono text-cyan-400 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800">en-GB-RyanNeural</span>
+            </div>
+            <audio id="voiceAudioPlayer" controls class="w-full h-11 rounded-lg outline-none" preload="auto"></audio>
+            <div class="grid grid-cols-3 gap-2 pt-2 text-center text-xs font-mono">
+              <div class="p-2 rounded bg-slate-900 border border-slate-800/80">
+                <div class="text-slate-400 text-[10px] uppercase">Duration</div>
+                <div id="audioDurationText" class="font-bold text-emerald-400 text-sm mt-0.5">0.0s</div>
+              </div>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800/80">
+                <div class="text-slate-400 text-[10px] uppercase">Spoken Words</div>
+                <div id="audioWordsText" class="font-bold text-cyan-400 text-sm mt-0.5">0</div>
+              </div>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800/80">
+                <div class="text-slate-400 text-[10px] uppercase">Pacing</div>
+                <div id="audioPacingText" class="font-bold text-amber-400 text-sm mt-0.5">0 wps</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- File Downloads & Subtitle Assets -->
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+            <div class="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              Render Assets & Synchronized Captions
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <a id="downloadAssBtn" href="#" target="_blank" class="flex items-center justify-center space-x-1.5 p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-cyan-300 transition">
+                <span>📄</span>
+                <span>Burn-In (.ass)</span>
+              </a>
+              <a id="downloadSrtBtn" href="#" target="_blank" class="flex items-center justify-center space-x-1.5 p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 transition">
+                <span>📝</span>
+                <span>Subtitles (.srt)</span>
+              </a>
+              <a id="downloadAudioBtn" href="#" download class="flex items-center justify-center space-x-1.5 p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-emerald-300 transition">
+                <span>🎵</span>
+                <span>Voice Track (.mp3)</span>
+              </a>
+            </div>
+            <div class="text-[11px] text-slate-400 leading-relaxed pt-1">
+              The <code class="text-cyan-400 bg-slate-900 px-1 py-0.5 rounded">.ass</code> file includes 1080x1920 vertical canvas sizing, 420px lower-third safe zone, and active-word yellow accent highlight (<code class="text-yellow-400">&H0000FFFF&</code>) ready for FFmpeg.
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side: 9:16 Shorts Screen Mockup with Realtime Synced Captions (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col items-center">
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>9:16 Shorts Real-time Caption Preview</span>
+          </div>
+          <!-- Phone Frame (9:16 ratio) -->
+          <div class="w-64 h-[440px] rounded-3xl bg-black border-4 border-slate-700 shadow-2xl relative overflow-hidden flex flex-col justify-between p-4">
+            <!-- Top Mockup Status Bar -->
+            <div class="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+              <span>PREVIEW</span>
+              <span id="playerPlaybackTime">00:00.0</span>
+            </div>
+
+            <!-- Center Video Area Placeholder -->
+            <div class="text-center text-slate-600 text-xs">
+              <div class="text-3xl opacity-30 mb-1">🎬</div>
+              <div class="text-[10px] uppercase font-mono tracking-widest text-slate-600">Vertical Canvas (1080x1920)</div>
+            </div>
+
+            <!-- Lower-Third Safe Zone Subtitle Display (MarginV=420 safe zone) -->
+            <div class="mb-6 px-2 text-center min-h-[90px] flex items-center justify-center">
+              <div id="liveCaptionDisplay" class="text-white font-black text-base tracking-tight uppercase leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                <span class="text-xs text-slate-500 font-normal italic lowercase">Press Play on audio to view word-level animated highlighting</span>
+              </div>
+            </div>
+
+            <!-- Mock YouTube Shorts Right-Rail Actions -->
+            <div class="absolute right-3 bottom-14 flex flex-col items-center space-y-3 opacity-60 text-xs text-white">
+              <div class="text-center">👍<div class="text-[9px]">Like</div></div>
+              <div class="text-center">💬<div class="text-[9px]">Remix</div></div>
+              <div class="text-center">↗️<div class="text-[9px]">Share</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Controls Bar -->
     <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 mb-8 shadow-xl">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -130,6 +254,149 @@
   <script>
     let currentFactsById = {};
     let currentScript = null;
+    let captionSyncHandler = null;
+
+    function formatTimeDisplay(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      const centis = Math.floor((seconds % 1) * 10);
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${centis}`;
+    }
+
+    async function loadVoiceAndCaptions(jobId) {
+      const voiceSection = document.getElementById('voiceSection');
+      const container = document.getElementById('voicePreviewContainer');
+      const audioEl = document.getElementById('voiceAudioPlayer');
+
+      try {
+        const vRes = await fetch(`/api/jobs/${jobId}/voice`);
+        if (!vRes.ok) {
+          // Voice not generated yet; keep voice section visible if approved
+          voiceSection.classList.remove('hidden');
+          return;
+        }
+        const voiceData = await vRes.json();
+
+        const cRes = await fetch(`/api/jobs/${jobId}/captions?format=json`);
+        if (!cRes.ok) return;
+        const captionData = await cRes.json();
+
+        voiceSection.classList.remove('hidden');
+        container.classList.remove('hidden');
+
+        // Setup audio source
+        audioEl.src = `/api/jobs/${jobId}/audio?t=${Date.now()}`;
+        audioEl.load();
+
+        // Populate metadata stats
+        const duration = voiceData.audio.duration_seconds || 0;
+        const words = voiceData.words_total || 0;
+        const pacing = duration > 0 ? (words / duration).toFixed(1) : '0.0';
+
+        document.getElementById('audioDurationText').textContent = `${duration}s`;
+        document.getElementById('audioWordsText').textContent = words;
+        document.getElementById('audioPacingText').textContent = `${pacing} wps`;
+        document.getElementById('voiceBadge').textContent = voiceData.audio.voice_used || 'Default';
+
+        // Set download links
+        document.getElementById('downloadAssBtn').href = `/api/jobs/${jobId}/captions?format=ass`;
+        document.getElementById('downloadSrtBtn').href = `/api/jobs/${jobId}/captions?format=srt`;
+        document.getElementById('downloadAudioBtn').href = `/api/jobs/${jobId}/audio`;
+
+        // Wire synchronized 9:16 caption preview
+        setupAudioCaptionSync(audioEl, captionData.words || [], captionData.chunks || []);
+      } catch (err) {
+        console.warn('Could not load existing voice data:', err);
+      }
+    }
+
+    function setupAudioCaptionSync(audioEl, words, chunks) {
+      const display = document.getElementById('liveCaptionDisplay');
+      const timeDisplay = document.getElementById('playerPlaybackTime');
+
+      if (captionSyncHandler) {
+        audioEl.removeEventListener('timeupdate', captionSyncHandler);
+      }
+
+      // Initial state
+      if (chunks.length > 0) {
+        display.innerHTML = chunks[0].text;
+      }
+
+      captionSyncHandler = () => {
+        const curSec = audioEl.currentTime;
+        const curMs = Math.floor(curSec * 1000);
+        timeDisplay.textContent = formatTimeDisplay(curSec);
+
+        // Find active word
+        const activeWord = words.find(w => curMs >= w.start_ms && curMs <= w.end_ms);
+        // Find active chunk
+        let activeChunk = null;
+        if (activeWord) {
+          activeChunk = chunks.find(c => c.words.some(cw => cw.start_ms === activeWord.start_ms));
+        }
+        if (!activeChunk) {
+          activeChunk = chunks.find(c => curMs >= c.start_ms && curMs <= c.end_ms);
+        }
+
+        if (activeChunk) {
+          const renderedWords = activeChunk.words.map(w => {
+            const isCurrent = activeWord && (w.start_ms === activeWord.start_ms || w.word.toUpperCase() === activeWord.word.toUpperCase());
+            if (isCurrent) {
+              return `<span class="text-yellow-300 font-black scale-110 px-1 inline-block drop-shadow-[0_0_12px_rgba(253,224,71,0.9)] underline decoration-yellow-400 decoration-2 underline-offset-4">${w.word}</span>`;
+            }
+            return `<span class="text-white">${w.word}</span>`;
+          });
+          display.innerHTML = renderedWords.join(' ');
+        } else if (audioEl.paused && curMs === 0 && chunks.length > 0) {
+          display.innerHTML = `<span class="text-slate-300">${chunks[0].text}</span>`;
+        }
+      };
+
+      audioEl.addEventListener('timeupdate', captionSyncHandler);
+    }
+
+    async function generateVoiceAndCaptions() {
+      if (!currentJobId) {
+        alert("No active job found.");
+        return;
+      }
+      const btn = document.getElementById('generateVoiceBtn');
+      const text = document.getElementById('generateVoiceText');
+      const icon = document.getElementById('generateVoiceIcon');
+      const voiceSelect = document.getElementById('voiceSelect');
+
+      btn.disabled = true;
+      icon.textContent = '🌀';
+      icon.className = 'inline-block animate-spin';
+      text.textContent = 'Synthesizing Commentary Audio...';
+
+      try {
+        const res = await fetch(`/api/jobs/${currentJobId}/generate-voice`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voice_override: voiceSelect.value }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+
+        await loadVoiceAndCaptions(currentJobId);
+        text.textContent = 'Voice & Captions Ready ✓';
+        icon.className = '';
+        icon.textContent = '✓';
+      } catch (err) {
+        alert('Voice generation failed: ' + err.message);
+        icon.className = '';
+        icon.textContent = '⚡';
+        text.textContent = 'Generate Voice & Captions';
+      } finally {
+        btn.disabled = false;
+        setTimeout(() => {
+          icon.className = '';
+          icon.textContent = '⚡';
+          text.textContent = 'Regenerate Voice & Captions';
+        }, 2000);
+      }
+    }
 
     async function runSourceAndScriptPipeline() {
       if (!currentJobId) return;
@@ -301,7 +568,8 @@
         document.getElementById('selectedTopicTitle').textContent = 'Script locked. Ready for Milestone 7: Voice, Timestamps & Captions.';
         document.getElementById('approveScriptBtn').disabled = true;
         document.getElementById('approveScriptBtn').textContent = 'Approved ✓';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById('voiceSection').classList.remove('hidden');
+        document.getElementById('voiceSection').scrollIntoView({ behavior: 'smooth' });
       } catch (err) {
         alert('Script approval failed: ' + err.message);
       }
@@ -519,6 +787,7 @@
                 approveBtn.disabled = true;
                 approveBtn.textContent = 'Approved ✓';
               }
+              loadVoiceAndCaptions(latest.job_id);
             }
           }
         }
