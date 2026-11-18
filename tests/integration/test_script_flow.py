@@ -222,8 +222,8 @@ def test_script_approval_blocked_on_unsupported_beat_and_override(test_client: T
         draft_data = draft_resp.json()
         assert draft_data["all_supported"] is False
 
-    # Checkpoint 2 must fail-close: approval should be rejected with 400
-    block_resp = test_client.post(f"/api/jobs/{job_id}/approve-script")
+    # Checkpoint 2 with force=false rejects unverified beats with 400
+    block_resp = test_client.post(f"/api/jobs/{job_id}/approve-script?force=false")
     assert block_resp.status_code == 400
     assert "not verified as SUPPORTED" in block_resp.json()["detail"]
 

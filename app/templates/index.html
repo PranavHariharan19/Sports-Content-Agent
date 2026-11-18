@@ -243,11 +243,17 @@
         list.appendChild(beatCard);
       });
 
-      approveBtn.disabled = !canApprove;
-      if (!canApprove) {
-        approveBtn.title = "All beats must be verified as SUPPORTED or overridden by human review";
+      // The approve script button is available at all times regardless of individual line states
+      if (script.is_approved) {
+        approveBtn.disabled = true;
+        approveBtn.textContent = 'Approved ✓';
+        approveBtn.className = 'px-5 py-2 rounded-xl text-sm font-bold bg-slate-800 text-slate-400 border border-slate-700 cursor-default';
+        approveBtn.title = 'Script is already approved';
       } else {
-        approveBtn.title = "Approve script and proceed to Milestone 6/7";
+        approveBtn.disabled = false;
+        approveBtn.textContent = 'Approve Script →';
+        approveBtn.className = 'px-5 py-2 rounded-xl text-sm font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 active:scale-95 transition shadow-lg cursor-pointer';
+        approveBtn.title = 'Approve script for voice generation and video rendering (Checkpoint 2)';
       }
     }
 
@@ -285,7 +291,7 @@
       if (!confirm("Approve this script for voice generation and video rendering (Checkpoint 2)?")) return;
 
       try {
-        const res = await fetch(`/api/jobs/${currentJobId}/approve-script`, { method: 'POST' });
+        const res = await fetch(`/api/jobs/${currentJobId}/approve-script?force=true`, { method: 'POST' });
         if (!res.ok) throw new Error(await res.text());
         const approved = await res.json();
 

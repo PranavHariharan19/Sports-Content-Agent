@@ -14,14 +14,15 @@ from schemas.script import BeatType, GeneratedScript, ScriptBeat
 logger = get_logger(__name__)
 
 SYSTEM_PROMPT = """You are a professional sports video scriptwriter producing punchy, factual YouTube Shorts scripts.
-CRITICAL ANTI-HALLUCINATION RULES:
+CRITICAL ANTI-HALLUCINATION & STYLE RULES:
 1. Use ONLY the provided verified facts below. NEVER use outside memory or invent any entity, number, date, score, or rumor.
 2. Structure: Hook (first 2 seconds) -> 3-5 factual beats -> Closing line.
 3. Word count: 80 to 120 words total (target: 30-45 seconds at ~2.5 words/sec).
 4. Every beat making a factual claim MUST set is_factual=true and cite its backing fact_ids in cited_fact_ids.
-5. If a fact requires attribution, you MUST explicitly name the reporting outlet in the spoken text (e.g. 'according to BBC Sport...').
-6. Any beat with is_factual=false (hooks, transitions, closing lines) MUST NOT introduce any new entity, number, date, or claim.
-7. Tone: Punchy, high-energy, neutral, strictly truthful.
+5. NATURAL YOUTUBE SHORTS NARRATION: Write engaging, punchy, broadcast-style spoken narration. DO NOT cite web domains or news outlets in the spoken lines (e.g. NEVER say 'According to skysports.com', 'as reported by bbc.co.uk', or recite outlet URLs). State match events, scores, quotes, and action directly and excitingly.
+6. HEDGING: If a fact is marked HEDGED (such as transfer speculation or injury doubts), use natural spoken hedging like 'reports indicate' or 'sources suggest' without reciting web domains.
+7. Any beat with is_factual=false (hooks, transitions, closing lines) MUST NOT introduce any new entity, number, date, or claim.
+8. Tone: High-energy, engaging, conversational, strictly truthful.
 """
 
 SCRIPT_PROMPT_TEMPLATE = """Write a 30-45 second YouTube Short script about: "{headline}".
@@ -60,10 +61,8 @@ class ScriptGenerator:
                 continue
 
             attr_note = ""
-            if f.requires_attribution and f.attribution_outlet:
-                attr_note = f" (REQUIRES ATTRIBUTION: cite '{f.attribution_outlet}')"
-            elif f.is_hedged:
-                attr_note = " (HEDGED: state as reported/target, not definite)"
+            if f.is_hedged:
+                attr_note = " (HEDGED: state with hedging like 'reports indicate', do not recite web domains)"
 
             lines.append(
                 f"- [{f.fact_id}] {f.claim}{attr_note}\n"

@@ -81,8 +81,8 @@ def test_ungrounded_entity_fails_lint():
 
 
 def test_missing_required_attribution_fails_lint():
-    """Verify single-source reported fact fails lint if outlet attribution is omitted."""
-    linter = DeterministicScriptLinter()
+    """Verify single-source reported fact fails lint if outlet attribution is enforced."""
+    linter = DeterministicScriptLinter(enforce_outlet_attribution=True)
 
     f1 = ExtractedFact.create(
         job_id="j1", claim="Arsenal in talks for winger", source_id="s1",

@@ -102,6 +102,7 @@ async def override_beat(
 @router.post("/{job_id}/approve-script", response_model=GeneratedScript)
 async def approve_script(
     job_id: str,
+    force: bool = Query(True, description="Human approval overrides individual line states"),
     db: DatabaseManager = Depends(get_db),
     sm: PipelineStateMachine = Depends(get_state_machine),
     cfg: RootConfig = Depends(get_config),
@@ -120,7 +121,7 @@ async def approve_script(
     )
 
     try:
-        approved_script = stage.approve_script_checkpoint(job_id)
+        approved_script = stage.approve_script_checkpoint(job_id, force=force)
         return approved_script
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

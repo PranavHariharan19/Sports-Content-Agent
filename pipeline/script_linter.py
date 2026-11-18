@@ -26,9 +26,11 @@ COMMON_WORDS = {
 
 class DeterministicScriptLinter:
     """Non-LLM deterministic linter enforcing strict grounding, entity checks,
-
     attribution, and banning hallucinated superlatives.
     """
+
+    def __init__(self, enforce_outlet_attribution: bool = False):
+        self.enforce_outlet_attribution = enforce_outlet_attribution
 
     def lint_beat(
         self,
@@ -100,12 +102,13 @@ class DeterministicScriptLinter:
                     errors.append(f"Banned unsupported superlative pattern detected in beat")
                     break
 
-        # 6. Mandatory attribution check
-        for f in cited_facts:
-            if f.requires_attribution and f.attribution_outlet:
-                clean_outlet = f.attribution_outlet.split(".")[0].lower()
-                if clean_outlet not in text_lower:
-                    errors.append(f"Beat cites single-source fact '{f.fact_id}' but omits required attribution to '{f.attribution_outlet}'")
+        # 6. Optional attribution check (only if enforce_outlet_attribution is enabled)
+        if self.enforce_outlet_attribution:
+            for f in cited_facts:
+                if f.requires_attribution and f.attribution_outlet:
+                    clean_outlet = f.attribution_outlet.split(".")[0].lower()
+                    if clean_outlet not in text_lower:
+                        errors.append(f"Beat cites single-source fact '{f.fact_id}' but omits required attribution to '{f.attribution_outlet}'")
 
         return errors
 
