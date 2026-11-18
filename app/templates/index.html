@@ -167,9 +167,9 @@
           <!-- Phone Frame (9:16 ratio) -->
           <div class="w-64 h-[440px] rounded-3xl bg-black border-4 border-slate-700 shadow-2xl relative overflow-hidden flex flex-col justify-between p-4">
             <!-- Top Mockup Status Bar -->
-            <div class="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-              <span>PREVIEW</span>
-              <span id="playerPlaybackTime">00:00.0</span>
+            <div class="flex items-center justify-between text-[10px] font-mono">
+              <span id="previewBeatBadge" class="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-semibold border border-slate-700">BEAT #1</span>
+              <span id="playerPlaybackTime" class="text-slate-400">00:00.0</span>
             </div>
 
             <!-- Center Video Area Placeholder -->
@@ -304,15 +304,16 @@
         document.getElementById('downloadAudioBtn').href = `/api/jobs/${jobId}/audio`;
 
         // Wire synchronized 9:16 caption preview
-        setupAudioCaptionSync(audioEl, captionData.words || [], captionData.chunks || []);
+        setupAudioCaptionSync(audioEl, captionData.words || [], captionData.chunks || [], captionData.beats || []);
       } catch (err) {
         console.warn('Could not load existing voice data:', err);
       }
     }
 
-    function setupAudioCaptionSync(audioEl, words, chunks) {
+    function setupAudioCaptionSync(audioEl, words, chunks, beats) {
       const display = document.getElementById('liveCaptionDisplay');
       const timeDisplay = document.getElementById('playerPlaybackTime');
+      const beatBadge = document.getElementById('previewBeatBadge');
 
       if (captionSyncHandler) {
         audioEl.removeEventListener('timeupdate', captionSyncHandler);
@@ -328,15 +329,21 @@
         const curMs = Math.floor(curSec * 1000);
         timeDisplay.textContent = formatTimeDisplay(curSec);
 
+        // Track active beat
+        const curBeat = (beats || []).find(b => curMs >= b.start_ms && curMs <= b.end_ms);
+        if (curBeat && beatBadge) {
+          beatBadge.textContent = `BEAT #${curBeat.beat_id}`;
+          beatBadge.className = 'px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 font-semibold border border-emerald-700/50';
+        }
+
         // Find active word
         const activeWord = words.find(w => curMs >= w.start_ms && curMs <= w.end_ms);
-        // Find active chunk
+        // Find active chunk strictly matching current beat/word
         let activeChunk = null;
         if (activeWord) {
           activeChunk = chunks.find(c => c.words.some(cw => cw.start_ms === activeWord.start_ms));
-        }
-        if (!activeChunk) {
-          activeChunk = chunks.find(c => curMs >= c.start_ms && curMs <= c.end_ms);
+        } else if (curBeat) {
+          activeChunk = chunks.find(c => c.beat_id === curBeat.beat_id && curMs >= c.start_ms && curMs <= c.end_ms);
         }
 
         if (activeChunk) {
@@ -348,6 +355,9 @@
             return `<span class="text-white">${w.word}</span>`;
           });
           display.innerHTML = renderedWords.join(' ');
+        } else if (!curBeat && !activeWord && !audioEl.paused) {
+          // In pause between beats: clean transition indicator so no two beats overlap on screen
+          display.innerHTML = `<span class="text-slate-600 text-xs tracking-widest uppercase font-mono">&bull; &bull; &bull;</span>`;
         } else if (audioEl.paused && curMs === 0 && chunks.length > 0) {
           display.innerHTML = `<span class="text-slate-300">${chunks[0].text}</span>`;
         }

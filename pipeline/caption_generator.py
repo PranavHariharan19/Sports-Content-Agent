@@ -3,21 +3,22 @@
 Formats:
 - Advanced SubStation Alpha (.ass) with 9:16 vertical styling (1080x1920)
 - Lower-third safe-zone positioning (MarginV=420)
-- 2-4 word rhythmic chunking
+- 2-4 word rhythmic chunking strictly constrained within individual beat boundaries
 - Active word accent color highlight (e.g. bright yellow &H0000FFFF&)
 - Clean SubRip (.srt) fallback
 """
 from pathlib import Path
 import re
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from app.logging_config import get_logger
-from schemas.voice import SubtitleChunk, SubtitleFileRecord, WordTimestamp
+from schemas.voice import BeatTimestamp, SubtitleChunk, SubtitleFileRecord, WordTimestamp
 
 logger = get_logger(__name__)
 
-# Standard ASS timestamp format: H:MM:SS.CC (centiseconds)
+
 def ms_to_ass_time(ms: int) -> str:
+    """Standard ASS timestamp format: H:MM:SS.CC (centiseconds)."""
     hours = ms // 3600000
     minutes = (ms % 3600000) // 60000
     seconds = (ms % 60000) // 1000
@@ -25,8 +26,8 @@ def ms_to_ass_time(ms: int) -> str:
     return f"{hours}:{minutes:02d}:{seconds:02d}.{centis:02d}"
 
 
-# Standard SRT timestamp format: HH:MM:SS,mmm
 def ms_to_srt_time(ms: int) -> str:
+    """Standard SRT timestamp format: HH:MM:SS,mmm."""
     hours = ms // 3600000
     minutes = (ms % 3600000) // 60000
     seconds = (ms % 60000) // 1000
@@ -60,7 +61,7 @@ class CaptionGenerator:
         self.max_chunk_words = max_chunk_words
 
     def chunk_words(self, words: List[WordTimestamp]) -> List[SubtitleChunk]:
-        """Group word timestamps into 2-4 word rhythmic phrases."""
+        """Group word timestamps into 2-4 word phrases, never spanning across beat boundaries."""
         if not words:
             return []
 
@@ -69,23 +70,39 @@ class CaptionGenerator:
         chunk_id = 1
 
         for w in words:
+            # 1. Hard Beat Boundary Check:
+            # If the current word belongs to a different beat than previous words,
+            # finalize the current beat's chunk immediately.
+            if current_words and w.beat_id is not None and current_words[-1].beat_id is not None:
+                if w.beat_id != current_words[-1].beat_id:
+                    chunks.append(
+                        SubtitleChunk(
+                            chunk_id=chunk_id,
+                            beat_id=current_words[0].beat_id,
+                            words=list(current_words),
+                            start_ms=current_words[0].start_ms,
+                            end_ms=current_words[-1].end_ms,
+                            text=" ".join(item.word for item in current_words),
+                        )
+                    )
+                    chunk_id += 1
+                    current_words = []
+
             current_words.append(w)
-            # Break chunk if:
-            # 1. Punctuation ending sentence or pause
-            # 2. Reached max_chunk_words
+
+            # 2. Break chunk if:
+            # - Punctuation ending sentence/phrase
+            # - Reached max_chunk_words (e.g. 4)
             ends_with_punct = bool(re.search(r"[\.,!?;:–—]$", w.word))
             if len(current_words) >= self.max_chunk_words or ends_with_punct:
-                chunk_start = current_words[0].start_ms
-                chunk_end = current_words[-1].end_ms
-                chunk_text = " ".join(item.word for item in current_words)
-
                 chunks.append(
                     SubtitleChunk(
                         chunk_id=chunk_id,
+                        beat_id=current_words[0].beat_id,
                         words=list(current_words),
-                        start_ms=chunk_start,
-                        end_ms=chunk_end,
-                        text=chunk_text,
+                        start_ms=current_words[0].start_ms,
+                        end_ms=current_words[-1].end_ms,
+                        text=" ".join(item.word for item in current_words),
                     )
                 )
                 chunk_id += 1
@@ -95,6 +112,7 @@ class CaptionGenerator:
             chunks.append(
                 SubtitleChunk(
                     chunk_id=chunk_id,
+                    beat_id=current_words[0].beat_id,
                     words=list(current_words),
                     start_ms=current_words[0].start_ms,
                     end_ms=current_words[-1].end_ms,
@@ -125,7 +143,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         return header
 
     def generate_ass_content(self, words: List[WordTimestamp]) -> str:
-        """Generate ASS subtitle document with word-level highlight tags."""
+        """Generate ASS subtitle document with word-level highlight tags and strict beat boundaries."""
         header = self.build_ass_header()
         chunks = self.chunk_words(words)
         events: List[str] = []
@@ -133,22 +151,23 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         for chunk in chunks:
             chunk_word_count = len(chunk.words)
             for idx, target_word in enumerate(chunk.words):
-                # Start and end times for this specific word's highlighted state
                 w_start = ms_to_ass_time(target_word.start_ms)
                 # Next word's start or end of current word
                 if idx + 1 < chunk_word_count:
                     next_word = chunk.words[idx + 1]
                     w_end = ms_to_ass_time(next_word.start_ms)
                 else:
+                    # Final word in chunk ends exactly at target_word end_ms
                     w_end = ms_to_ass_time(target_word.end_ms)
 
                 # Format chunk line: target word in highlight color with pop scale, other words in white
                 formatted_words: List[str] = []
                 for j, w in enumerate(chunk.words):
                     if j == idx:
-                        # Highlighted word with slight scale pop
                         clean_word = w.word.upper()
-                        formatted_words.append(f"{{\\c{self.highlight_color}\\fscx108\\fscy108}}{clean_word}{{\\c{self.primary_color}\\fscx100\\fscy100}}")
+                        formatted_words.append(
+                            f"{{\\c{self.highlight_color}\\fscx108\\fscy108}}{clean_word}{{\\c{self.primary_color}\\fscx100\\fscy100}}"
+                        )
                     else:
                         formatted_words.append(w.word.upper())
 
@@ -158,7 +177,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         return header + "\n".join(events) + "\n"
 
     def generate_srt_content(self, words: List[WordTimestamp]) -> str:
-        """Generate clean SRT subtitles grouped by chunk."""
+        """Generate clean SRT subtitles grouped by beat-constrained chunks."""
         chunks = self.chunk_words(words)
         lines: List[str] = []
 
@@ -174,6 +193,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         words: List[WordTimestamp],
         output_dir: Path,
         job_id: str,
+        beats: Optional[List[BeatTimestamp]] = None,
     ) -> SubtitleFileRecord:
         """Generate and save both .ass and .srt subtitle files to disk."""
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -191,12 +211,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         chunks = self.chunk_words(words)
         logger.info(
-            "Wrote subtitles for job %s: ASS at %s, SRT at %s (%d chunks, %d words)",
+            "Wrote subtitles for job %s: ASS at %s, SRT at %s (%d chunks, %d words, %d beats)",
             job_id,
             ass_path,
             srt_path,
             len(chunks),
             len(words),
+            len(beats or []),
         )
 
         return SubtitleFileRecord(
@@ -206,4 +227,5 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             chunk_count=len(chunks),
             word_count=len(words),
             words=words,
+            beats=beats or [],
         )

@@ -58,6 +58,36 @@ def test_empty_words_chunking():
     assert gen.chunk_words([]) == []
 
 
+def test_chunk_words_never_spans_multiple_beats():
+    """Verify that chunks never mix words from two different beats even without punctuation."""
+    gen = CaptionGenerator(max_chunk_words=4)
+    # Beat 1 ends with only 2 words and NO punctuation
+    # Beat 2 starts immediately with 2 words
+    words = [
+        WordTimestamp(word="world", start_ms=2000, end_ms=2500, beat_id=1),
+        WordTimestamp(word="champions", start_ms=2500, end_ms=3200, beat_id=1),
+        WordTimestamp(word="In", start_ms=4000, end_ms=4300, beat_id=2),
+        WordTimestamp(word="this", start_ms=4300, end_ms=4600, beat_id=2),
+        WordTimestamp(word="thrilling", start_ms=4600, end_ms=5000, beat_id=2),
+        WordTimestamp(word="match", start_ms=5000, end_ms=5400, beat_id=2),
+    ]
+
+    chunks = gen.chunk_words(words)
+    # Must NOT produce "world champions In this"
+    # Chunk 1 must contain ONLY Beat 1 words
+    assert len(chunks) == 2
+    assert chunks[0].beat_id == 1
+    assert chunks[0].text == "world champions"
+    assert len(chunks[0].words) == 2
+    assert chunks[0].end_ms == 3200
+
+    # Chunk 2 must start fresh with Beat 2 words
+    assert chunks[1].beat_id == 2
+    assert chunks[1].text == "In this thrilling match"
+    assert chunks[1].start_ms == 4000
+    assert len(chunks[1].words) == 4
+
+
 def test_ass_header_dimensions_and_safezone():
     """Verify ASS header contains 9:16 vertical resolution and 420px lower safe zone."""
     gen = CaptionGenerator(margin_v=420, font_name="Arial Black", font_size=70)

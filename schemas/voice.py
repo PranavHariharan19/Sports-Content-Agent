@@ -8,6 +8,28 @@ class WordTimestamp(BaseModel):
     word: str
     start_ms: int = Field(description="Start time in milliseconds from start of audio")
     end_ms: int = Field(description="End time in milliseconds from start of audio")
+    beat_id: Optional[int] = Field(default=None, description="Script beat ID this word belongs to")
+
+    @property
+    def start_sec(self) -> float:
+        return self.start_ms / 1000.0
+
+    @property
+    def end_sec(self) -> float:
+        return self.end_ms / 1000.0
+
+    @property
+    def duration_ms(self) -> int:
+        return max(0, self.end_ms - self.start_ms)
+
+
+class BeatTimestamp(BaseModel):
+    """Timing boundaries and word spans for an individual script beat."""
+    beat_id: int
+    start_ms: int
+    end_ms: int
+    spoken_text: str
+    word_count: int
 
     @property
     def start_sec(self) -> float:
@@ -33,8 +55,9 @@ class AudioMetadata(BaseModel):
 
 
 class SubtitleChunk(BaseModel):
-    """A 2-4 word caption chunk displayed on screen simultaneously."""
+    """A 2-4 word caption chunk displayed on screen simultaneously within a single beat."""
     chunk_id: int
+    beat_id: Optional[int] = Field(default=None, description="Script beat ID this chunk belongs to")
     words: List[WordTimestamp]
     start_ms: int
     end_ms: int
@@ -49,6 +72,7 @@ class SubtitleFileRecord(BaseModel):
     chunk_count: int
     word_count: int
     words: List[WordTimestamp] = Field(default_factory=list)
+    beats: List[BeatTimestamp] = Field(default_factory=list)
 
 
 class VoiceStageResult(BaseModel):
@@ -58,3 +82,4 @@ class VoiceStageResult(BaseModel):
     subtitles: SubtitleFileRecord
     words_total: int
     total_duration_seconds: float
+    beat_timings: List[BeatTimestamp] = Field(default_factory=list)

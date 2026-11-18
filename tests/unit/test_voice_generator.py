@@ -99,3 +99,66 @@ async def test_edge_tts_live_quick_synthesis(tmp_path: Path):
     except Exception as e:
         # If offline or rate limited in CI, skip live test
         pytest.skip(f"Live edge-tts network unreachable: {e}")
+
+
+def test_align_words_to_beats():
+    """Verify that word timestamps are accurately mapped to individual script beats."""
+    from pipeline.voice_stage import VoicePipelineStage
+    from schemas.script import BeatType, ScriptBeat
+
+    beats = [
+        ScriptBeat(
+            beat_id=1,
+            beat_type=BeatType.HOOK,
+            spoken_text="Spain defeated England against the world champions!",
+            cited_fact_ids=[],
+        ),
+        ScriptBeat(
+            beat_id=2,
+            beat_type=BeatType.FACTUAL_BEAT,
+            spoken_text="In this Nations League clash, Tuchel was stunned.",
+            cited_fact_ids=[],
+        ),
+    ]
+
+    words = [
+        WordTimestamp(word="Spain", start_ms=100, end_ms=400),
+        WordTimestamp(word="defeated", start_ms=450, end_ms=800),
+        WordTimestamp(word="England", start_ms=850, end_ms=1200),
+        WordTimestamp(word="against", start_ms=1250, end_ms=1500),
+        WordTimestamp(word="the", start_ms=1550, end_ms=1700),
+        WordTimestamp(word="world", start_ms=1750, end_ms=2100),
+        WordTimestamp(word="champions", start_ms=2150, end_ms=2700),  # End of Beat 1 (TTS stripped punctuation)
+        WordTimestamp(word="In", start_ms=3500, end_ms=3700),          # Start of Beat 2
+        WordTimestamp(word="this", start_ms=3750, end_ms=4000),
+        WordTimestamp(word="Nations", start_ms=4050, end_ms=4400),
+        WordTimestamp(word="League", start_ms=4450, end_ms=4800),
+        WordTimestamp(word="clash", start_ms=4850, end_ms=5200),
+        WordTimestamp(word="Tuchel", start_ms=5250, end_ms=5600),
+        WordTimestamp(word="was", start_ms=5650, end_ms=5800),
+        WordTimestamp(word="stunned", start_ms=5850, end_ms=6300),
+    ]
+
+    aligned_words, beat_timings = VoicePipelineStage.align_words_to_beats(beats, words)
+
+    assert len(beat_timings) == 2
+    # Beat 1 timings
+    assert beat_timings[0].beat_id == 1
+    assert beat_timings[0].start_ms == 100
+    assert beat_timings[0].end_ms == 2700
+    assert beat_timings[0].word_count == 7
+
+    # Beat 2 timings
+    assert beat_timings[1].beat_id == 2
+    assert beat_timings[1].start_ms == 3500
+    assert beat_timings[1].end_ms == 6300
+    assert beat_timings[1].word_count == 8
+
+    # Beat 1 words must all have beat_id=1, Beat 2 must have beat_id=2
+    for w in aligned_words[:7]:
+        assert w.beat_id == 1
+    for w in aligned_words[7:]:
+        assert w.beat_id == 2
+
+    # Punctuation restored on terminating word of Beat 1
+    assert aligned_words[6].word == "champions!"

@@ -219,6 +219,7 @@ async def get_captions(
                 "chunk_count": len(chunks),
                 "chunks": [c.model_dump() for c in chunks],
                 "words": [w.model_dump() for w in stage_result.subtitles.words],
+                "beats": [b.model_dump() for b in stage_result.beat_timings],
             }
         except Exception as e:
             logger.error("Failed to parse captions JSON for job %s: %s", job_id, str(e))
