@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api.discovery import router as discovery_router
 from app.api.facts import router as facts_router
+from app.api.media import router as media_router
 from app.api.script import router as script_router
 from app.api.sources import router as sources_router
 from app.api.voice import router as voice_router
@@ -64,6 +65,7 @@ def create_app(config: Optional[RootConfig] = None) -> FastAPI:
     app.include_router(facts_router)
     app.include_router(script_router)
     app.include_router(voice_router)
+    app.include_router(media_router)
 
     @app.get("/", response_class=HTMLResponse)
     @app.get("/ui", response_class=HTMLResponse)

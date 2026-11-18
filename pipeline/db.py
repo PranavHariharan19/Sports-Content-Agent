@@ -19,6 +19,7 @@ from schemas.common import (
 )
 from schemas.facts import ConflictRecord, ExtractedFact
 from schemas.job import JobRecord, StageRunRecord
+from schemas.media import MediaAsset, MediaType
 from schemas.script import BeatType, GeneratedScript, ScriptBeat
 from schemas.sources import StoredSource
 
@@ -140,6 +141,26 @@ CREATE TABLE IF NOT EXISTS scripts (
     FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS media_assets (
+    asset_id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    beat_id INTEGER NOT NULL,
+    media_type TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    source_provider TEXT NOT NULL,
+    attribution TEXT,
+    headline TEXT NOT NULL,
+    caption_text TEXT NOT NULL,
+    start_ms INTEGER NOT NULL,
+    end_ms INTEGER NOT NULL,
+    duration_seconds REAL NOT NULL,
+    width INTEGER NOT NULL DEFAULT 1080,
+    height INTEGER NOT NULL DEFAULT 1920,
+    query_used TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_stage_runs_job_id ON stage_runs(job_id);
 CREATE INDEX IF NOT EXISTS idx_llm_cache_provider ON llm_cache(provider, model);
@@ -149,6 +170,7 @@ CREATE INDEX IF NOT EXISTS idx_facts_job_id ON facts(job_id);
 CREATE INDEX IF NOT EXISTS idx_facts_status ON facts(corroboration_status);
 CREATE INDEX IF NOT EXISTS idx_conflicts_job_id ON conflicts(job_id);
 CREATE INDEX IF NOT EXISTS idx_scripts_job_id ON scripts(job_id);
+CREATE INDEX IF NOT EXISTS idx_media_assets_job_id ON media_assets(job_id);
 """
 
 
@@ -833,6 +855,125 @@ class DatabaseManager:
         self.save_script(script)
         logger.info("Recorded human override on beat %d for job %s: action=%s, reason=%s", beat_id, job_id, action, reason)
         return self.get_script_for_job(job_id)
+
+    def save_media_assets(self, assets: List[MediaAsset]) -> None:
+        """Persist or update grounded media assets for a job."""
+        if not assets:
+            return
+
+        now = datetime.now(timezone.utc).isoformat()
+        with self.get_connection() as conn:
+            for a in assets:
+                conn.execute(
+                    """
+                    INSERT INTO media_assets (
+                        asset_id, job_id, beat_id, media_type, file_path,
+                        source_provider, attribution, headline, caption_text,
+                        start_ms, end_ms, duration_seconds, width, height, query_used, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(asset_id) DO UPDATE SET
+                        file_path = excluded.file_path,
+                        source_provider = excluded.source_provider,
+                        attribution = excluded.attribution,
+                        headline = excluded.headline,
+                        caption_text = excluded.caption_text,
+                        start_ms = excluded.start_ms,
+                        end_ms = excluded.end_ms,
+                        duration_seconds = excluded.duration_seconds,
+                        query_used = excluded.query_used
+                    """,
+                    (
+                        a.asset_id,
+                        a.job_id,
+                        a.beat_id,
+                        a.media_type.value,
+                        a.file_path,
+                        a.source_provider,
+                        a.attribution,
+                        a.headline,
+                        a.caption_text,
+                        a.start_ms,
+                        a.end_ms,
+                        a.duration_seconds,
+                        a.width,
+                        a.height,
+                        a.query_used,
+                        now,
+                    ),
+                )
+        logger.info("Saved %d media assets for job %s", len(assets), assets[0].job_id)
+
+    def get_media_assets_for_job(self, job_id: str) -> List[MediaAsset]:
+        """Retrieve all media assets associated with a job ordered by beat."""
+        with self.get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT asset_id, job_id, beat_id, media_type, file_path,
+                       source_provider, attribution, headline, caption_text,
+                       start_ms, end_ms, duration_seconds, width, height, query_used
+                FROM media_assets
+                WHERE job_id = ?
+                ORDER BY beat_id ASC
+                """,
+                (job_id,),
+            ).fetchall()
+
+            return [
+                MediaAsset(
+                    asset_id=r["asset_id"],
+                    job_id=r["job_id"],
+                    beat_id=r["beat_id"],
+                    media_type=MediaType(r["media_type"]),
+                    file_path=r["file_path"],
+                    source_provider=r["source_provider"],
+                    attribution=r["attribution"],
+                    headline=r["headline"],
+                    caption_text=r["caption_text"],
+                    start_ms=r["start_ms"],
+                    end_ms=r["end_ms"],
+                    duration_seconds=r["duration_seconds"],
+                    width=r["width"],
+                    height=r["height"],
+                    query_used=r["query_used"],
+                )
+                for r in rows
+            ]
+
+    def get_media_asset_for_beat(self, job_id: str, beat_id: int) -> Optional[MediaAsset]:
+        """Retrieve media asset for a specific beat of a job."""
+        with self.get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT asset_id, job_id, beat_id, media_type, file_path,
+                       source_provider, attribution, headline, caption_text,
+                       start_ms, end_ms, duration_seconds, width, height, query_used
+                FROM media_assets
+                WHERE job_id = ? AND beat_id = ?
+                LIMIT 1
+                """,
+                (job_id, beat_id),
+            ).fetchone()
+
+            if not row:
+                return None
+
+            return MediaAsset(
+                asset_id=row["asset_id"],
+                job_id=row["job_id"],
+                beat_id=row["beat_id"],
+                media_type=MediaType(row["media_type"]),
+                file_path=row["file_path"],
+                source_provider=row["source_provider"],
+                attribution=row["attribution"],
+                headline=row["headline"],
+                caption_text=row["caption_text"],
+                start_ms=row["start_ms"],
+                end_ms=row["end_ms"],
+                duration_seconds=row["duration_seconds"],
+                width=row["width"],
+                height=row["height"],
+                query_used=row["query_used"],
+            )
 
 
 
