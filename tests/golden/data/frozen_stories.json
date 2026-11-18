@@ -1,0 +1,1239 @@
+[
+  {
+    "story_id": "fb_1",
+    "sport": "football",
+    "headline": "Real Madrid win 15th European Cup with Wembley victory over Dortmund",
+    "sources": [
+      {
+        "source_id": "fb_1_s1",
+        "domain": "bbc.com",
+        "source_tier": "tier_2",
+        "url": "https://bbc.com/sport/football/ucl-final-2024",
+        "text": "Real Madrid were crowned European champions for the 15th time after defeating Borussia Dortmund 2-0 at Wembley Stadium. Dani Carvajal broke the deadlock with a header in the 74th minute before Vinicius Junior added a second goal in the 83rd minute. Thibaut Courtois made several crucial saves in the first half to deny Niclas Fullkrug and Karim Adeyemi."
+      },
+      {
+        "source_id": "fb_1_s2",
+        "domain": "uefa.com",
+        "source_tier": "tier_1",
+        "url": "https://uefa.com/uefachampionsleague/match/2024-final",
+        "text": "Real Madrid secured their 15th UEFA Champions League title with a 2-0 win over Borussia Dortmund at Wembley. Dani Carvajal opened the scoring on 74 minutes, and Vinicius Junior doubled the advantage on 83 minutes. Carlo Ancelotti clinched a record-extending fifth Champions League title as coach."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_fb1_1",
+        "claim": "Real Madrid secured their 15th UEFA Champions League title with a 2-0 win over Borussia Dortmund at Wembley",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Real Madrid",
+          "Borussia Dortmund",
+          "Wembley"
+        ],
+        "normalized_value": "2-0",
+        "source_id": "fb_1_s2",
+        "evidence_quote": "Real Madrid secured their 15th UEFA Champions League title with a 2-0 win over Borussia Dortmund at Wembley."
+      },
+      {
+        "fact_id": "gt_fb1_2",
+        "claim": "Dani Carvajal broke the deadlock with a header in the 74th minute",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Dani Carvajal"
+        ],
+        "normalized_value": "74",
+        "source_id": "fb_1_s1",
+        "evidence_quote": "Dani Carvajal broke the deadlock with a header in the 74th minute"
+      },
+      {
+        "fact_id": "gt_fb1_3",
+        "claim": "Vinicius Junior added a second goal in the 83rd minute",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Vinicius Junior"
+        ],
+        "normalized_value": "83",
+        "source_id": "fb_1_s1",
+        "evidence_quote": "Vinicius Junior added a second goal in the 83rd minute."
+      },
+      {
+        "fact_id": "gt_fb1_4",
+        "claim": "Thibaut Courtois made several crucial saves in the first half to deny Niclas Fullkrug and Karim Adeyemi",
+        "fact_type": "other",
+        "normalized_entities": [
+          "Thibaut Courtois",
+          "Niclas Fullkrug",
+          "Karim Adeyemi"
+        ],
+        "normalized_value": null,
+        "source_id": "fb_1_s1",
+        "evidence_quote": "Thibaut Courtois made several crucial saves in the first half to deny Niclas Fullkrug and Karim Adeyemi."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_fb1_1",
+        "claim": "Jude Bellingham scored a hat-trick in the final",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Jude Bellingham"
+        ],
+        "normalized_value": "3",
+        "source_id": "fb_1_s1",
+        "evidence_quote": "Bellingham scored an astonishing hat-trick to seal Wembley glory",
+        "expected_discard": true,
+        "reason": "fabricated quote not in source text"
+      },
+      {
+        "fact_id": "adv_fb1_2",
+        "claim": "Dani Carvajal scored in the 99th minute",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Dani Carvajal"
+        ],
+        "normalized_value": "99",
+        "source_id": "fb_1_s1",
+        "evidence_quote": "Dani Carvajal broke the deadlock with a header in the 74th minute",
+        "expected_discard": true,
+        "reason": "number in claim does not match evidence quote"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "Real Madrid secured their 15th UEFA Champions League title with a 2-0 win over Borussia Dortmund at Wembley.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb1_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Dani Carvajal broke the deadlock in the 74th minute before Vinicius Junior added a second in the 83rd minute.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb1_2",
+          "gt_fb1_3"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Borussia Dortmund missed 10 open goals in the first ten minutes.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb1_1"
+        ],
+        "human_label": "UNSUPPORTED"
+      },
+      {
+        "spoken_text": "Real Madrid lost the match 2-0 against Borussia Dortmund.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb1_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "fb_2",
+    "sport": "football",
+    "headline": "Arsenal overpower Chelsea 3-1 at Emirates in dominant derby display",
+    "sources": [
+      {
+        "source_id": "fb_2_s1",
+        "domain": "bbc.com",
+        "source_tier": "tier_2",
+        "url": "https://bbc.com/sport/football/arsenal-chelsea",
+        "text": "Arsenal produced a clinical performance to beat London rivals Chelsea 3-1 at Emirates Stadium. Bukayo Saka scored from the penalty spot and Declan Rice fired in from the edge of the box. Martin Odegaard opened the scoring after 18 minutes, while Noni Madueke scored a consolation goal for Chelsea."
+      },
+      {
+        "source_id": "fb_2_s2",
+        "domain": "premierleague.com",
+        "source_tier": "tier_1",
+        "url": "https://premierleague.com/match/arsenal-chelsea",
+        "text": "Arsenal defeated Chelsea 3-1 at the Emirates Stadium. Martin Odegaard struck after 18 minutes before Bukayo Saka and Declan Rice extended the lead. Chelsea's lone goal came courtesy of Noni Madueke."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_fb2_1",
+        "claim": "Arsenal beat London rivals Chelsea 3-1 at Emirates Stadium",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Arsenal",
+          "Chelsea",
+          "Emirates Stadium"
+        ],
+        "normalized_value": "3-1",
+        "source_id": "fb_2_s1",
+        "evidence_quote": "Arsenal produced a clinical performance to beat London rivals Chelsea 3-1 at Emirates Stadium."
+      },
+      {
+        "fact_id": "gt_fb2_2",
+        "claim": "Martin Odegaard opened the scoring after 18 minutes",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Martin Odegaard"
+        ],
+        "normalized_value": "18",
+        "source_id": "fb_2_s1",
+        "evidence_quote": "Martin Odegaard opened the scoring after 18 minutes"
+      },
+      {
+        "fact_id": "gt_fb2_3",
+        "claim": "Bukayo Saka scored from the penalty spot and Declan Rice fired in from the edge of the box",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Bukayo Saka",
+          "Declan Rice"
+        ],
+        "normalized_value": null,
+        "source_id": "fb_2_s1",
+        "evidence_quote": "Bukayo Saka scored from the penalty spot and Declan Rice fired in from the edge of the box."
+      },
+      {
+        "fact_id": "gt_fb2_4",
+        "claim": "Noni Madueke scored a consolation goal for Chelsea",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Noni Madueke",
+          "Chelsea"
+        ],
+        "normalized_value": null,
+        "source_id": "fb_2_s1",
+        "evidence_quote": "while Noni Madueke scored a consolation goal for Chelsea."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_fb2_1",
+        "claim": "Chelsea won the derby 5-0",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Chelsea"
+        ],
+        "normalized_value": "5-0",
+        "source_id": "fb_2_s1",
+        "evidence_quote": "Arsenal produced a clinical performance to beat London rivals Chelsea 3-1 at Emirates Stadium.",
+        "expected_discard": true,
+        "reason": "claim score 5-0 does not appear in quote"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "Arsenal produced a clinical performance to beat London rivals Chelsea 3-1 at Emirates Stadium.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb2_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Martin Odegaard struck after 18 minutes, followed by strikes from Bukayo Saka and Declan Rice.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb2_2",
+          "gt_fb2_3"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Chelsea defeated Arsenal by 90 goals.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb2_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "fb_3",
+    "sport": "football",
+    "headline": "Manchester City claim unprecedented fourth consecutive Premier League title",
+    "sources": [
+      {
+        "source_id": "fb_3_s1",
+        "domain": "skysports.com",
+        "source_tier": "tier_2",
+        "url": "https://skysports.com/football/man-city-west-ham",
+        "text": "Manchester City made English football history by becoming the first men's team to win four consecutive top-flight titles. Pep Guardiola's side secured the trophy with a 3-1 win over West Ham on the final day, finishing with 91 points. Phil Foden scored twice in the first half, including an opener inside two minutes."
+      },
+      {
+        "source_id": "fb_3_s2",
+        "domain": "premierleague.com",
+        "source_tier": "tier_1",
+        "url": "https://premierleague.com/news/man-city-champions",
+        "text": "Manchester City are the champions of England for the fourth season running. City beat West Ham 3-1 at the Etihad Stadium to finish with 91 points, two points clear of Arsenal. Phil Foden scored two goals before Rodri added a third."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_fb3_1",
+        "claim": "Manchester City made English football history by becoming the first men's team to win four consecutive top-flight titles",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Manchester City"
+        ],
+        "normalized_value": "4",
+        "source_id": "fb_3_s1",
+        "evidence_quote": "Manchester City made English football history by becoming the first men's team to win four consecutive top-flight titles."
+      },
+      {
+        "fact_id": "gt_fb3_2",
+        "claim": "Pep Guardiola's side secured the trophy with a 3-1 win over West Ham, finishing with 91 points",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Pep Guardiola",
+          "West Ham"
+        ],
+        "normalized_value": "91",
+        "source_id": "fb_3_s1",
+        "evidence_quote": "Pep Guardiola's side secured the trophy with a 3-1 win over West Ham on the final day, finishing with 91 points."
+      },
+      {
+        "fact_id": "gt_fb3_3",
+        "claim": "Phil Foden scored twice in the first half, including an opener inside two minutes",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Phil Foden"
+        ],
+        "normalized_value": "2",
+        "source_id": "fb_3_s1",
+        "evidence_quote": "Phil Foden scored twice in the first half, including an opener inside two minutes."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_fb3_1",
+        "claim": "Arsenal won the league with 105 points",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Arsenal"
+        ],
+        "normalized_value": "105",
+        "source_id": "fb_3_s1",
+        "evidence_quote": "Arsenal celebrated winning the Premier League with 105 points",
+        "expected_discard": true,
+        "reason": "fabricated quote not in source"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "Manchester City made English football history by becoming the first men's team to win four consecutive top-flight titles.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb3_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "City defeated West Ham 3-1 to conclude their campaign on 91 points.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb3_2"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "West Ham won 10-0 and Manchester City were relegated.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb3_2"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "fb_4",
+    "sport": "football",
+    "headline": "England end Spain 43-game unbeaten run in Nations League thriller",
+    "sources": [
+      {
+        "source_id": "fb_4_s1",
+        "domain": "skysports.com",
+        "source_tier": "tier_2",
+        "url": "https://skysports.com/football/spain-england-nations-league",
+        "text": "The UEFA Nations League Group A3 match took place on Monday 16 November 2026 at Wanda Metropolitano between Spain and England. Roy Keane called England's performance perfect at half-time. Goals from Ezri Konsa and Ben White came in the first 12 minutes of the second half. Elliot Anderson was sent off after 65 minutes, and Mikel Oyarzabal scored from the spot. The defeat ended Spain's 43-game unbeaten run."
+      },
+      {
+        "source_id": "fb_4_s2",
+        "domain": "uefa.com",
+        "source_tier": "tier_1",
+        "url": "https://uefa.com/nationsleague/match/spain-england",
+        "text": "England defeated Spain in an intense UEFA Nations League Group A3 fixture at the Wanda Metropolitano. Ezri Konsa and Ben White scored second-half goals for England before Spain's 43-game unbeaten streak was brought to an end."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_fb4_1",
+        "claim": "The UEFA Nations League Group A3 match took place on Monday 16 November 2026 at Wanda Metropolitano between Spain and England",
+        "fact_type": "date",
+        "normalized_entities": [
+          "Wanda Metropolitano",
+          "Spain",
+          "England"
+        ],
+        "normalized_value": "16 November 2026",
+        "source_id": "fb_4_s1",
+        "evidence_quote": "The UEFA Nations League Group A3 match took place on Monday 16 November 2026 at Wanda Metropolitano between Spain and England."
+      },
+      {
+        "fact_id": "gt_fb4_2",
+        "claim": "Goals from Ezri Konsa and Ben White came in the first 12 minutes of the second half",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Ezri Konsa",
+          "Ben White"
+        ],
+        "normalized_value": "12",
+        "source_id": "fb_4_s1",
+        "evidence_quote": "Goals from Ezri Konsa and Ben White came in the first 12 minutes of the second half."
+      },
+      {
+        "fact_id": "gt_fb4_3",
+        "claim": "The defeat ended Spain's 43-game unbeaten run",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Spain"
+        ],
+        "normalized_value": "43",
+        "source_id": "fb_4_s1",
+        "evidence_quote": "The defeat ended Spain's 43-game unbeaten run."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_fb4_1",
+        "claim": "Spain's 900-game unbeaten run was ended",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Spain"
+        ],
+        "normalized_value": "900",
+        "source_id": "fb_4_s1",
+        "evidence_quote": "The defeat ended Spain's 43-game unbeaten run.",
+        "expected_discard": true,
+        "reason": "number 900 not found in quote"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "The UEFA Nations League Group A3 match took place on Monday 16 November 2026 at Wanda Metropolitano between Spain and England.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb4_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Goals from Ezri Konsa and Ben White snapped Spain's historic 43-game unbeaten run.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb4_2",
+          "gt_fb4_3"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Spain won the match 5-0 after a penalty shootout.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_fb4_3"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "cr_1",
+    "sport": "cricket",
+    "headline": "India crowned T20 World Cup champions in dramatic seven-run win over South Africa",
+    "sources": [
+      {
+        "source_id": "cr_1_s1",
+        "domain": "espncricinfo.com",
+        "source_tier": "tier_2",
+        "url": "https://espncricinfo.com/series/t20-world-cup-2024-final",
+        "text": "India ended an 11-year drought for an ICC trophy by beating South Africa by seven runs in a pulsating T20 World Cup final at Kensington Oval in Barbados. Virat Kohli anchored the innings with 76 off 59 balls before Jasprit Bumrah returned figures of 2 for 18. Hardik Pandya defended 16 runs in the final over, dismissing David Miller courtesy of a spectacular catch on the boundary by Suryakumar Yadav."
+      },
+      {
+        "source_id": "cr_1_s2",
+        "domain": "icc-cricket.com",
+        "source_tier": "tier_1",
+        "url": "https://icc-cricket.com/news/india-win-t20-world-cup",
+        "text": "India are the ICC Men's T20 World Cup 2024 champions after defeating South Africa by seven runs in Barbados. Player of the match Virat Kohli scored 76 to guide India to 176 for 7. South Africa finished on 169 for 8 as Jasprit Bumrah and Hardik Pandya held their nerve in the death overs."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_cr1_1",
+        "claim": "India ended an 11-year drought for an ICC trophy by beating South Africa by seven runs in a pulsating T20 World Cup final at Kensington Oval in Barbados",
+        "fact_type": "score",
+        "normalized_entities": [
+          "India",
+          "South Africa",
+          "Barbados"
+        ],
+        "normalized_value": "7 runs",
+        "source_id": "cr_1_s1",
+        "evidence_quote": "India ended an 11-year drought for an ICC trophy by beating South Africa by seven runs in a pulsating T20 World Cup final at Kensington Oval in Barbados."
+      },
+      {
+        "fact_id": "gt_cr1_2",
+        "claim": "Virat Kohli anchored the innings with 76 off 59 balls",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Virat Kohli"
+        ],
+        "normalized_value": "76",
+        "source_id": "cr_1_s1",
+        "evidence_quote": "Virat Kohli anchored the innings with 76 off 59 balls"
+      },
+      {
+        "fact_id": "gt_cr1_3",
+        "claim": "Jasprit Bumrah returned figures of 2 for 18",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Jasprit Bumrah"
+        ],
+        "normalized_value": "2/18",
+        "source_id": "cr_1_s1",
+        "evidence_quote": "before Jasprit Bumrah returned figures of 2 for 18."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_cr1_1",
+        "claim": "Virat Kohli scored 250 runs in the final",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Virat Kohli"
+        ],
+        "normalized_value": "250",
+        "source_id": "cr_1_s1",
+        "evidence_quote": "Virat Kohli anchored the innings with 76 off 59 balls",
+        "expected_discard": true,
+        "reason": "number 250 not found in evidence quote"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "India lifted the T20 World Cup after a thrilling 7-run victory over South Africa in Barbados.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr1_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Virat Kohli led from the front with 76 off 59 balls, backed by Jasprit Bumrah's 2 for 18.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr1_2",
+          "gt_cr1_3"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "South Africa won by 100 runs after bowling India out for zero.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr1_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "cr_2",
+    "sport": "cricket",
+    "headline": "Stuart Broad takes wicket with final ball to seal England Ashes victory at The Oval",
+    "sources": [
+      {
+        "source_id": "cr_2_s1",
+        "domain": "bbc.com",
+        "source_tier": "tier_2",
+        "url": "https://bbc.com/sport/cricket/ashes-oval-2023",
+        "text": "Stuart Broad produced a storybook finish to his legendary career by claiming a wicket with his final delivery in Test cricket as England beat Australia by 49 runs at The Oval. Broad had Alex Carey caught behind to secure victory, ensuring the thrilling Ashes series finished 2-2. Broad finished his Test career with 604 wickets."
+      },
+      {
+        "source_id": "cr_2_s2",
+        "domain": "ecb.co.uk",
+        "source_tier": "tier_1",
+        "url": "https://ecb.co.uk/news/england-ashes-the-oval",
+        "text": "England defeated Australia by 49 runs in the fifth and final Test at The Oval to draw the Ashes 2-2. Stuart Broad concluded his Test career with 604 wickets, taking the final wicket of Alex Carey with his last ball in international cricket."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_cr2_1",
+        "claim": "England beat Australia by 49 runs at The Oval to draw the Ashes 2-2",
+        "fact_type": "score",
+        "normalized_entities": [
+          "England",
+          "Australia",
+          "The Oval"
+        ],
+        "normalized_value": "49 runs",
+        "source_id": "cr_2_s1",
+        "evidence_quote": "as England beat Australia by 49 runs at The Oval. Broad had Alex Carey caught behind to secure victory, ensuring the thrilling Ashes series finished 2-2."
+      },
+      {
+        "fact_id": "gt_cr2_2",
+        "claim": "Stuart Broad produced a storybook finish to his legendary career by claiming a wicket with his final delivery in Test cricket",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Stuart Broad"
+        ],
+        "normalized_value": null,
+        "source_id": "cr_2_s1",
+        "evidence_quote": "Stuart Broad produced a storybook finish to his legendary career by claiming a wicket with his final delivery in Test cricket"
+      },
+      {
+        "fact_id": "gt_cr2_3",
+        "claim": "Broad finished his Test career with 604 wickets",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Stuart Broad"
+        ],
+        "normalized_value": "604",
+        "source_id": "cr_2_s1",
+        "evidence_quote": "Broad finished his Test career with 604 wickets."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_cr2_1",
+        "claim": "Broad announced he was signing for Australia",
+        "fact_type": "transfer",
+        "normalized_entities": [
+          "Stuart Broad",
+          "Australia"
+        ],
+        "normalized_value": null,
+        "source_id": "cr_2_s1",
+        "evidence_quote": "Broad stunned fans by confirming a move to play for Australia",
+        "expected_discard": true,
+        "reason": "fabricated quote"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "England beat Australia by 49 runs at The Oval to tie the Ashes series 2-2.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr2_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Stuart Broad took a wicket with the very last delivery of his career, finishing with 604 wickets.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr2_2",
+          "gt_cr2_3"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Australia won by twenty thousand runs.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr2_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "cr_3",
+    "sport": "cricket",
+    "headline": "Kolkata Knight Riders crush Sunrisers Hyderabad to win third IPL title",
+    "sources": [
+      {
+        "source_id": "cr_3_s1",
+        "domain": "cricbuzz.com",
+        "source_tier": "tier_2",
+        "url": "https://cricbuzz.com/cricket-news/ipl-2024-final",
+        "text": "Kolkata Knight Riders stormed to their third Indian Premier League title with an emphatic eight-wicket victory over Sunrisers Hyderabad at MA Chidambaram Stadium in Chennai. Mitchell Starc spearheaded the attack with 2 for 14 as SRH were bowled out for 113 in 18.3 overs. Venkatesh Iyer smashed an unbeaten 52 off 26 balls to seal the title with 57 balls to spare."
+      },
+      {
+        "source_id": "cr_3_s2",
+        "domain": "iplt20.com",
+        "source_tier": "tier_1",
+        "url": "https://iplt20.com/match/2024-final",
+        "text": "KKR defeated Sunrisers Hyderabad by eight wickets in Chennai to lift the TATA IPL 2024 trophy. SRH were dismissed for 113 before KKR chased down the target in 10.3 overs, led by Venkatesh Iyer's unbeaten half-century."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_cr3_1",
+        "claim": "Kolkata Knight Riders stormed to their third Indian Premier League title with an emphatic eight-wicket victory over Sunrisers Hyderabad at MA Chidambaram Stadium in Chennai",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Kolkata Knight Riders",
+          "Sunrisers Hyderabad",
+          "Chennai"
+        ],
+        "normalized_value": "8 wickets",
+        "source_id": "cr_3_s1",
+        "evidence_quote": "Kolkata Knight Riders stormed to their third Indian Premier League title with an emphatic eight-wicket victory over Sunrisers Hyderabad at MA Chidambaram Stadium in Chennai."
+      },
+      {
+        "fact_id": "gt_cr3_2",
+        "claim": "Mitchell Starc spearheaded the attack with 2 for 14 as SRH were bowled out for 113 in 18.3 overs",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Mitchell Starc",
+          "SRH"
+        ],
+        "normalized_value": "2/14",
+        "source_id": "cr_3_s1",
+        "evidence_quote": "Mitchell Starc spearheaded the attack with 2 for 14 as SRH were bowled out for 113 in 18.3 overs."
+      },
+      {
+        "fact_id": "gt_cr3_3",
+        "claim": "Venkatesh Iyer smashed an unbeaten 52 off 26 balls to seal the title with 57 balls to spare",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Venkatesh Iyer"
+        ],
+        "normalized_value": "52",
+        "source_id": "cr_3_s1",
+        "evidence_quote": "Venkatesh Iyer smashed an unbeaten 52 off 26 balls to seal the title with 57 balls to spare."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_cr3_1",
+        "claim": "Sunrisers Hyderabad won the match by 200 runs",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Sunrisers Hyderabad"
+        ],
+        "normalized_value": "200 runs",
+        "source_id": "cr_3_s1",
+        "evidence_quote": "Kolkata Knight Riders stormed to their third Indian Premier League title with an emphatic eight-wicket victory over Sunrisers Hyderabad at MA Chidambaram Stadium in Chennai.",
+        "expected_discard": true,
+        "reason": "claim numbers disagree with quote"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "Kolkata Knight Riders claimed their third Indian Premier League title by eight wickets in Chennai.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr3_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Mitchell Starc spearheaded the attack with 2 for 14 to dismiss SRH for 113.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr3_2"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Sunrisers Hyderabad won the match comfortably by 200 runs.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr3_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "cr_4",
+    "sport": "cricket",
+    "headline": "Mohammed Shami seven-wicket haul powers India into World Cup final",
+    "sources": [
+      {
+        "source_id": "cr_4_s1",
+        "domain": "espncricinfo.com",
+        "source_tier": "tier_2",
+        "url": "https://espncricinfo.com/series/world-cup-2023-semi-final-1",
+        "text": "India surged into the World Cup final with a 70-run victory over New Zealand in an electrifying semi-final at Wankhede Stadium in Mumbai. Mohammed Shami claimed a sensational 7 for 57 to break New Zealand's resistance. Earlier, Virat Kohli struck his record-breaking 50th ODI century, surpassing Sachin Tendulkar's tally, as India posted 397 for 4."
+      },
+      {
+        "source_id": "cr_4_s2",
+        "domain": "icc-cricket.com",
+        "source_tier": "tier_1",
+        "url": "https://icc-cricket.com/news/india-semi-final-wankhede",
+        "text": "India defeated New Zealand by 70 runs at Wankhede Stadium to advance to the World Cup final. Mohammed Shami took career-best figures of 7 for 57, following centuries from Virat Kohli (117) and Shreyas Iyer (105)."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_cr4_1",
+        "claim": "India surged into the World Cup final with a 70-run victory over New Zealand in an electrifying semi-final at Wankhede Stadium in Mumbai",
+        "fact_type": "score",
+        "normalized_entities": [
+          "India",
+          "New Zealand",
+          "Mumbai"
+        ],
+        "normalized_value": "70 runs",
+        "source_id": "cr_4_s1",
+        "evidence_quote": "India surged into the World Cup final with a 70-run victory over New Zealand in an electrifying semi-final at Wankhede Stadium in Mumbai."
+      },
+      {
+        "fact_id": "gt_cr4_2",
+        "claim": "Mohammed Shami claimed a sensational 7 for 57 to break New Zealand's resistance",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Mohammed Shami"
+        ],
+        "normalized_value": "7/57",
+        "source_id": "cr_4_s1",
+        "evidence_quote": "Mohammed Shami claimed a sensational 7 for 57 to break New Zealand's resistance."
+      },
+      {
+        "fact_id": "gt_cr4_3",
+        "claim": "Earlier, Virat Kohli struck his record-breaking 50th ODI century, surpassing Sachin Tendulkar's tally, as India posted 397 for 4",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Virat Kohli",
+          "Sachin Tendulkar"
+        ],
+        "normalized_value": "50",
+        "source_id": "cr_4_s1",
+        "evidence_quote": "Earlier, Virat Kohli struck his record-breaking 50th ODI century, surpassing Sachin Tendulkar's tally, as India posted 397 for 4."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_cr4_1",
+        "claim": "Mohammed Shami bowled with both hands simultaneously",
+        "fact_type": "other",
+        "normalized_entities": [
+          "Mohammed Shami"
+        ],
+        "normalized_value": null,
+        "source_id": "cr_4_s1",
+        "evidence_quote": "Shami bowled using both hands to confuse batsmen",
+        "expected_discard": true,
+        "reason": "fabricated quote"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "India surged into the World Cup final with a 70-run victory over New Zealand at Wankhede Stadium.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr4_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Mohammed Shami claimed a sensational 7 for 57 to break New Zealand's resistance.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr4_2"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "New Zealand won the match by 500 runs.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_cr4_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "f1_1",
+    "sport": "f1",
+    "headline": "Lewis Hamilton takes emotional 104th victory at Silverstone",
+    "sources": [
+      {
+        "source_id": "f1_1_s1",
+        "domain": "bbc.com",
+        "source_tier": "tier_2",
+        "url": "https://bbc.com/sport/formula1/british-gp-2024",
+        "text": "Lewis Hamilton scored an incredible victory at the 2024 British Grand Prix at Silverstone. Hamilton held off Red Bull's Max Verstappen to win by 1.465 seconds, ending a 945-day win drought. It marked Hamilton's 104th career win and his record ninth triumph at Silverstone."
+      },
+      {
+        "source_id": "f1_1_s2",
+        "domain": "formula1.com",
+        "source_tier": "tier_1",
+        "url": "https://formula1.com/en/latest/article.2024-british-gp-race",
+        "text": "Lewis Hamilton ended his 945-day wait for a Grand Prix victory with a masterclass drive at Silverstone. The Mercedes driver withstood late pressure from Max Verstappen to take the chequered flag by 1.465 seconds, sealing his 104th career victory and a record ninth win at the British Grand Prix."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_f1_1",
+        "claim": "Lewis Hamilton scored an incredible victory at the 2024 British Grand Prix at Silverstone",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Lewis Hamilton",
+          "Silverstone"
+        ],
+        "normalized_value": "2024",
+        "source_id": "f1_1_s1",
+        "evidence_quote": "Lewis Hamilton scored an incredible victory at the 2024 British Grand Prix at Silverstone."
+      },
+      {
+        "fact_id": "gt_f1_2",
+        "claim": "Hamilton held off Red Bull's Max Verstappen to win by 1.465 seconds, ending a 945-day win drought",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Hamilton",
+          "Max Verstappen"
+        ],
+        "normalized_value": "1.465",
+        "source_id": "f1_1_s1",
+        "evidence_quote": "Hamilton held off Red Bull's Max Verstappen to win by 1.465 seconds, ending a 945-day win drought."
+      },
+      {
+        "fact_id": "gt_f1_3",
+        "claim": "It marked Hamilton's 104th career win and his record ninth triumph at Silverstone",
+        "fact_type": "record",
+        "normalized_entities": [
+          "Hamilton",
+          "Silverstone"
+        ],
+        "normalized_value": "104",
+        "source_id": "f1_1_s1",
+        "evidence_quote": "It marked Hamilton's 104th career win and his record ninth triumph at Silverstone."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_f1_1",
+        "claim": "Verstappen won the race by 50 seconds",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Max Verstappen"
+        ],
+        "normalized_value": "50",
+        "source_id": "f1_1_s1",
+        "evidence_quote": "Hamilton held off Red Bull's Max Verstappen to win by 1.465 seconds",
+        "expected_discard": true,
+        "reason": "claim contradicts winner and time in evidence quote"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "Lewis Hamilton scored an incredible victory at the 2024 British Grand Prix at Silverstone.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f1_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Hamilton held off Red Bull's Max Verstappen to win by 1.465 seconds, ending a 945-day win drought.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f1_2",
+          "gt_f1_3"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Hamilton crashed on the formation lap and retired immediately.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f1_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "f1_2",
+    "sport": "f1",
+    "headline": "Charles Leclerc breaks Monaco curse with emotional home victory",
+    "sources": [
+      {
+        "source_id": "f1_2_s1",
+        "domain": "skysports.com",
+        "source_tier": "tier_2",
+        "url": "https://skysports.com/f1/monaco-gp-2024",
+        "text": "Charles Leclerc ended his long-standing Monaco curse by claiming a historic first home win on the streets of Monte Carlo. Starting from pole position, the Ferrari driver controlled the pace throughout the 78 laps to win by 7.152 seconds ahead of McLaren's Oscar Piastri. Carlos Sainz completed the podium in third place."
+      },
+      {
+        "source_id": "f1_2_s2",
+        "domain": "formula1.com",
+        "source_tier": "tier_1",
+        "url": "https://formula1.com/en/latest/article.monaco-2024-race",
+        "text": "Charles Leclerc claimed a momentous victory at his home race in Monaco, converting pole position into a commanding win for Ferrari. Oscar Piastri finished second for McLaren, with Carlos Sainz taking third position."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_f12_1",
+        "claim": "Charles Leclerc ended his long-standing Monaco curse by claiming a historic first home win on the streets of Monte Carlo",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Charles Leclerc",
+          "Monte Carlo"
+        ],
+        "normalized_value": "1",
+        "source_id": "f1_2_s1",
+        "evidence_quote": "Charles Leclerc ended his long-standing Monaco curse by claiming a historic first home win on the streets of Monte Carlo."
+      },
+      {
+        "fact_id": "gt_f12_2",
+        "claim": "to win by 7.152 seconds ahead of McLaren's Oscar Piastri",
+        "fact_type": "ranking",
+        "normalized_entities": [
+          "Oscar Piastri"
+        ],
+        "normalized_value": "7.152",
+        "source_id": "f1_2_s1",
+        "evidence_quote": "to win by 7.152 seconds ahead of McLaren's Oscar Piastri."
+      },
+      {
+        "fact_id": "gt_f12_3",
+        "claim": "Carlos Sainz completed the podium in third place",
+        "fact_type": "ranking",
+        "normalized_entities": [
+          "Carlos Sainz"
+        ],
+        "normalized_value": "3",
+        "source_id": "f1_2_s1",
+        "evidence_quote": "Carlos Sainz completed the podium in third place."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_f12_1",
+        "claim": "Leclerc was disqualified for using an illegal rocket engine",
+        "fact_type": "other",
+        "normalized_entities": [
+          "Charles Leclerc"
+        ],
+        "normalized_value": null,
+        "source_id": "f1_2_s1",
+        "evidence_quote": "Leclerc was stripped of victory for an illegal engine",
+        "expected_discard": true,
+        "reason": "fabricated quote not in source"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "Charles Leclerc ended his long-standing Monaco curse by claiming a historic first home win on the streets of Monte Carlo.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f12_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Leclerc won by 7.152 seconds ahead of Oscar Piastri, with Carlos Sainz completing the podium.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f12_2",
+          "gt_f12_3"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Leclerc finished in dead last position after five pit stops.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f12_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "f1_3",
+    "sport": "f1",
+    "headline": "Ferrari pull off Monza masterstroke as Charles Leclerc wins Italian Grand Prix",
+    "sources": [
+      {
+        "source_id": "f1_3_s1",
+        "domain": "bbc.com",
+        "source_tier": "tier_2",
+        "url": "https://bbc.com/sport/formula1/italian-gp-monza-2024",
+        "text": "Charles Leclerc sent the Monza tifosi into ecstasy as Ferrari pulled off a daring one-stop strategy to win the Italian Grand Prix. Leclerc made his single set of hard tyres last 38 laps to hold off the charging McLarens of Oscar Piastri and Lando Norris. Leclerc crossed the line 2.664 seconds ahead of Piastri to claim his second career Monza victory."
+      },
+      {
+        "source_id": "f1_3_s2",
+        "domain": "formula1.com",
+        "source_tier": "tier_1",
+        "url": "https://formula1.com/en/latest/article.monza-2024-leclerc-win",
+        "text": "Ferrari's Charles Leclerc executed a breathtaking one-stop tyre strategy to win the 2024 Italian Grand Prix at Monza, finishing 2.664 seconds ahead of Oscar Piastri."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_f13_1",
+        "claim": "Charles Leclerc sent the Monza tifosi into ecstasy as Ferrari pulled off a daring one-stop strategy to win the Italian Grand Prix",
+        "fact_type": "other",
+        "normalized_entities": [
+          "Charles Leclerc",
+          "Monza",
+          "Ferrari"
+        ],
+        "normalized_value": "1",
+        "source_id": "f1_3_s1",
+        "evidence_quote": "Charles Leclerc sent the Monza tifosi into ecstasy as Ferrari pulled off a daring one-stop strategy to win the Italian Grand Prix."
+      },
+      {
+        "fact_id": "gt_f13_2",
+        "claim": "Leclerc crossed the line 2.664 seconds ahead of Piastri to claim his second career Monza victory",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Leclerc",
+          "Piastri",
+          "Monza"
+        ],
+        "normalized_value": "2.664",
+        "source_id": "f1_3_s1",
+        "evidence_quote": "Leclerc crossed the line 2.664 seconds ahead of Piastri to claim his second career Monza victory."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_f13_1",
+        "claim": "Leclerc made 12 pit stops during the race",
+        "fact_type": "number",
+        "normalized_entities": [
+          "Leclerc"
+        ],
+        "normalized_value": "12",
+        "source_id": "f1_3_s1",
+        "evidence_quote": "Ferrari pulled off a daring one-stop strategy to win the Italian Grand Prix.",
+        "expected_discard": true,
+        "reason": "claim says 12 stops, quote says one-stop"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "Charles Leclerc sent the Monza tifosi into ecstasy as Ferrari pulled off a daring one-stop strategy to win the Italian Grand Prix.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f13_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Leclerc crossed the finish line 2.664 seconds ahead of Piastri.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f13_2"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Oscar Piastri won by forty laps ahead of Leclerc.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f13_2"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  },
+  {
+    "story_id": "f1_4",
+    "sport": "f1",
+    "headline": "Max Verstappen produces wet-weather masterclass from 17th to win Brazilian GP",
+    "sources": [
+      {
+        "source_id": "f1_4_s1",
+        "domain": "skysports.com",
+        "source_tier": "tier_2",
+        "url": "https://skysports.com/f1/brazilian-gp-2024",
+        "text": "Max Verstappen drove one of the greatest races of his career, rising from 17th on the grid in torrential rain to win the Sao Paulo Grand Prix at Interlagos. Verstappen took the lead on lap 43 and set 17 consecutive fastest laps, crossing the line 19.477 seconds ahead of Alpine's Esteban Ocon. Pierre Gasly finished third to secure a double podium for Alpine."
+      },
+      {
+        "source_id": "f1_4_s2",
+        "domain": "formula1.com",
+        "source_tier": "tier_1",
+        "url": "https://formula1.com/en/latest/article.brazil-2024-verstappen",
+        "text": "Red Bull's Max Verstappen delivered an astonishing wet-weather victory at Interlagos, charging from 17th on the grid to win by 19.477 seconds over Alpine's Esteban Ocon and Pierre Gasly."
+      }
+    ],
+    "ground_truth_facts": [
+      {
+        "fact_id": "gt_f14_1",
+        "claim": "Max Verstappen drove one of the greatest races of his career, rising from 17th on the grid in torrential rain to win the Sao Paulo Grand Prix at Interlagos",
+        "fact_type": "ranking",
+        "normalized_entities": [
+          "Max Verstappen",
+          "Interlagos"
+        ],
+        "normalized_value": "17",
+        "source_id": "f1_4_s1",
+        "evidence_quote": "Max Verstappen drove one of the greatest races of his career, rising from 17th on the grid in torrential rain to win the Sao Paulo Grand Prix at Interlagos."
+      },
+      {
+        "fact_id": "gt_f14_2",
+        "claim": "crossing the line 19.477 seconds ahead of Alpine's Esteban Ocon",
+        "fact_type": "score",
+        "normalized_entities": [
+          "Esteban Ocon"
+        ],
+        "normalized_value": "19.477",
+        "source_id": "f1_4_s1",
+        "evidence_quote": "crossing the line 19.477 seconds ahead of Alpine's Esteban Ocon."
+      },
+      {
+        "fact_id": "gt_f14_3",
+        "claim": "Pierre Gasly finished third to secure a double podium for Alpine",
+        "fact_type": "ranking",
+        "normalized_entities": [
+          "Pierre Gasly",
+          "Alpine"
+        ],
+        "normalized_value": "3",
+        "source_id": "f1_4_s1",
+        "evidence_quote": "Pierre Gasly finished third to secure a double podium for Alpine."
+      }
+    ],
+    "adversarial_injections": [
+      {
+        "fact_id": "adv_f14_1",
+        "claim": "Verstappen started on pole position and won in dry sunshine",
+        "fact_type": "ranking",
+        "normalized_entities": [
+          "Verstappen"
+        ],
+        "normalized_value": "1",
+        "source_id": "f1_4_s1",
+        "evidence_quote": "rising from 17th on the grid in torrential rain to win the Sao Paulo Grand Prix at Interlagos.",
+        "expected_discard": true,
+        "reason": "contradicts grid position and weather"
+      }
+    ],
+    "benchmark_beats": [
+      {
+        "spoken_text": "Max Verstappen drove one of the greatest races of his career, rising from 17th on the grid in torrential rain to win at Interlagos.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f14_1"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Verstappen crossed the line 19.477 seconds ahead of Esteban Ocon, with Pierre Gasly taking third for Alpine.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f14_2",
+          "gt_f14_3"
+        ],
+        "human_label": "SUPPORTED"
+      },
+      {
+        "spoken_text": "Verstappen crashed out on lap one and did not finish the Grand Prix.",
+        "is_factual": true,
+        "cited_fact_ids": [
+          "gt_f14_1"
+        ],
+        "human_label": "CONTRADICTED"
+      }
+    ]
+  }
+]

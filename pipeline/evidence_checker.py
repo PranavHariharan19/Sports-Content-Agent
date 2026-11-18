@@ -76,9 +76,9 @@ class DeterministicEvidenceChecker:
         clean_quote_lower = quote.lower()
         clean_source_lower = source_text.lower() if source_text else clean_quote_lower
 
-        # 1. Check numbers (e.g. scores, lap numbers, ages, prices)
-        claim_numbers = re.findall(r"\b\d+(?:[\.,]\d+)?\b", claim)
-        quote_numbers = set(re.findall(r"\b\d+(?:[\.,]\d+)?\b", quote))
+        # 1. Check numbers (e.g. scores, lap numbers, ages, prices, ordinals like 74th, 1st)
+        claim_numbers = re.findall(r"\b(\d+(?:[\.,]\d+)?)(?:st|nd|rd|th)?\b", claim, re.IGNORECASE)
+        quote_numbers = set(re.findall(r"\b(\d+(?:[\.,]\d+)?)(?:st|nd|rd|th)?\b", quote, re.IGNORECASE))
         for num in claim_numbers:
             if num not in quote_numbers:
                 return f"Number '{num}' in claim does not appear in evidence quote"

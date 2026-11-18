@@ -23,6 +23,15 @@ COMMON_WORDS = {
     "This", "That", "Here", "Now", "Watch", "What", "Who", "How", "Why",
 }
 
+WORD_TO_DIGIT = {
+    "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
+    "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
+    "ten": "10", "eleven": "11", "twelve": "12", "thirteen": "13",
+    "fourteen": "14", "fifteen": "15", "sixteen": "16", "seventeen": "17",
+    "eighteen": "18", "nineteen": "19", "twenty": "20", "thirty": "30",
+    "forty": "40", "fifty": "50",
+}
+
 
 class DeterministicScriptLinter:
     """Non-LLM deterministic linter enforcing strict grounding, entity checks,
@@ -69,10 +78,13 @@ class DeterministicScriptLinter:
 
         # Aggregate allowed numbers and text from cited facts
         cited_text = " ".join(f"{f.claim} {f.evidence_quote}" for f in cited_facts).lower()
-        allowed_numbers = set(re.findall(r"\b\d+(?:[\.,]\d+)?\b", cited_text))
+        allowed_numbers = set(re.findall(r"\b(\d+(?:[\.,]\d+)?)(?:st|nd|rd|th)?\b", cited_text, re.IGNORECASE))
+        for word, digit in WORD_TO_DIGIT.items():
+            if re.search(rf"\b{word}\b", cited_text, re.IGNORECASE):
+                allowed_numbers.add(digit)
 
         # 3. Numbers grounding check
-        beat_numbers = re.findall(r"\b\d+(?:[\.,]\d+)?\b", text)
+        beat_numbers = re.findall(r"\b(\d+(?:[\.,]\d+)?)(?:st|nd|rd|th)?\b", text, re.IGNORECASE)
         for num in beat_numbers:
             if num not in allowed_numbers:
                 errors.append(f"Number '{num}' in beat is not present in cited facts {beat.cited_fact_ids}")

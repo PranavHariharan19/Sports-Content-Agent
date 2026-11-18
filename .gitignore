@@ -36,7 +36,8 @@ htmlcov/
 .tox/
 
 # Local data & artifacts (Never commit raw video renders or local SQLite databases)
-data/
+/data/
+!tests/golden/data/
 *.sqlite
 *.sqlite3
 *.db
