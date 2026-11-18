@@ -85,11 +85,19 @@ class FactsExtractor:
             raw_text = raw_text.strip()
 
             parsed = json.loads(raw_text)
-            if isinstance(parsed, dict) and "facts" in parsed:
-                parsed = parsed["facts"]
+            if isinstance(parsed, dict):
+                for key in ("facts", "claims", "extracted_facts", "atomic_facts", "items", "data"):
+                    if key in parsed and isinstance(parsed[key], list):
+                        parsed = parsed[key]
+                        break
+                else:
+                    for val in parsed.values():
+                        if isinstance(val, list) and (not val or isinstance(val[0], dict)):
+                            parsed = val
+                            break
 
             if not isinstance(parsed, list):
-                logger.warning("Extraction response for source %s was not a list", source.source_id)
+                logger.warning("Extraction response for source %s was not a list: %s", source.source_id, raw_text[:200])
                 return []
 
             facts: List[ExtractedFact] = []

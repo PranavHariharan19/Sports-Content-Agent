@@ -1,8 +1,12 @@
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv
 import yaml
 from pydantic import BaseModel, Field
+
+# Automatically load environment variables from .env if present
+load_dotenv()
 
 
 class AppConfig(BaseModel):

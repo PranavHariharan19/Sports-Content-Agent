@@ -143,10 +143,16 @@ async def choose_topic(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    if job.status not in (JobStatus.RANKED, JobStatus.TOPIC_CHOSEN):
+    if job.status not in (
+        JobStatus.RANKED,
+        JobStatus.TOPIC_CHOSEN,
+        JobStatus.FACTS_VERIFIED,
+        JobStatus.SCRIPT_DRAFTED,
+        JobStatus.FAILED,
+    ):
         raise HTTPException(
             status_code=400,
-            detail=f"Job must be in RANKED status to choose topic (current: {job.status.value})",
+            detail=f"Job must be in a selectable status to choose topic (current: {job.status.value})",
         )
 
     target_cluster_id = payload.cluster_id.strip()

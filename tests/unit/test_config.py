@@ -10,7 +10,7 @@ def test_load_default_config():
     assert cfg.app.name == "Sports Shorts Command Center"
     assert "gemini" in cfg.llm.fallback_order
     assert "groq" in cfg.llm.fallback_order
-    assert cfg.llm.providers["gemini"].model == "gemini-2.5-flash"
+    assert cfg.llm.providers["gemini"].model == "gemini-3.5-flash-lite"
     assert cfg.pipeline.min_verified_facts >= 3
 
 

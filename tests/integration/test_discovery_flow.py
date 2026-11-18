@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+import email.utils
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 import pytest
@@ -6,7 +8,9 @@ from pipeline.db import DatabaseManager
 from schemas.common import JobStatus, SportType, StageName
 
 
-SAMPLE_RSS_DATA = """<?xml version="1.0" encoding="UTF-8"?>
+def get_sample_rss_data() -> str:
+    now_rfc822 = email.utils.format_datetime(datetime.now(timezone.utc))
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Sports Feed</title>
@@ -14,13 +18,13 @@ SAMPLE_RSS_DATA = """<?xml version="1.0" encoding="UTF-8"?>
       <title>Virat Kohli smashes record-breaking century for India</title>
       <link>https://www.espncricinfo.com/story/1001</link>
       <description>Masterclass innings in Chennai.</description>
-      <pubDate>Mon, 16 Nov 2026 12:00:00 GMT</pubDate>
+      <pubDate>{now_rfc822}</pubDate>
     </item>
     <item>
       <title>Kohli century powers India to dominant victory</title>
       <link>https://www.cricbuzz.com/cricket-news/2002</link>
       <description>Sensational batting display against Australia.</description>
-      <pubDate>Mon, 16 Nov 2026 12:30:00 GMT</pubDate>
+      <pubDate>{now_rfc822}</pubDate>
     </item>
   </channel>
 </rss>
@@ -39,7 +43,7 @@ def test_discovery_and_topic_choice_lifecycle(test_client: TestClient, db_manage
     """Verify discovery run, ranking stage persistence, and Checkpoint 1 topic selection."""
     mock_resp = AsyncMock()
     mock_resp.status_code = 200
-    mock_resp.text = SAMPLE_RSS_DATA
+    mock_resp.text = get_sample_rss_data()
     mock_resp.json = MagicMock(return_value={"items": []})
 
     with patch("httpx.AsyncClient.get", return_value=mock_resp):

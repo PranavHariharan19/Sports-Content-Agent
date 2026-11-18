@@ -10,8 +10,9 @@ from llm.openrouter_provider import OpenRouterProvider
 from schemas.llm import LLMRequest
 
 
-def test_gemini_provider_availability():
+def test_gemini_provider_availability(monkeypatch: pytest.MonkeyPatch):
     """Verify GeminiProvider availability check reflects API key presence."""
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     p_no_key = GeminiProvider(api_key=None)
     assert p_no_key.is_available() is False
 
@@ -20,8 +21,9 @@ def test_gemini_provider_availability():
 
 
 @pytest.mark.asyncio
-async def test_gemini_provider_unconfigured_raises_auth_error():
+async def test_gemini_provider_unconfigured_raises_auth_error(monkeypatch: pytest.MonkeyPatch):
     """Verify calling an unconfigured GeminiProvider raises LLMAuthError."""
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     provider = GeminiProvider(api_key=None)
     req = LLMRequest(prompt="Test prompt")
     with pytest.raises(LLMAuthError):

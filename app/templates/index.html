@@ -148,7 +148,8 @@
         if (!factsRes.ok) throw new Error(await factsRes.text());
         const ledger = await factsRes.json();
         currentFactsById = {};
-        (ledger.facts || []).forEach(f => { currentFactsById[f.fact_id] = f; });
+        const factsList = Array.isArray(ledger) ? ledger : (ledger.facts || []);
+        factsList.forEach(f => { currentFactsById[f.fact_id] = f; });
 
         // 3. Draft & verify script
         nextBtn.textContent = 'Drafting & Running Verifier Judge...';
@@ -488,15 +489,31 @@
             banner.classList.remove('hidden');
           }
         } else if (latest.status === 'SCRIPT_DRAFTED' || latest.status === 'SCRIPT_APPROVED') {
+          const banner = document.getElementById('checkpointBanner');
+          document.getElementById('checkpointTitle').textContent = latest.status === 'SCRIPT_APPROVED' ? 'Checkpoint 2 Completed: Script Approved!' : 'Checkpoint 2: Script Review & Provenance';
+          document.getElementById('selectedTopicTitle').textContent = latest.status === 'SCRIPT_APPROVED' ? 'Script locked and ready for voice generation.' : 'Review each sentence and cited evidence quotes below.';
+          document.getElementById('checkpointStatusBadge').textContent = `STATUS: ${latest.status}`;
+          document.getElementById('nextStageBtn').classList.add('hidden');
+          banner.classList.remove('hidden');
+
           const factsRes = await fetch(`/api/jobs/${latest.job_id}/facts`);
           if (factsRes.ok) {
-            const ledger = await factsRes.json();
-            (ledger.facts || []).forEach(f => { currentFactsById[f.fact_id] = f; });
+            const rawFacts = await factsRes.json();
+            currentFactsById = {};
+            const factsList = Array.isArray(rawFacts) ? rawFacts : (rawFacts.facts || []);
+            factsList.forEach(f => { currentFactsById[f.fact_id] = f; });
           }
           const scrRes = await fetch(`/api/jobs/${latest.job_id}/script`);
           if (scrRes.ok) {
             currentScript = await scrRes.json();
             renderScriptReview(currentScript);
+            if (latest.status === 'SCRIPT_APPROVED') {
+              const approveBtn = document.getElementById('approveScriptBtn');
+              if (approveBtn) {
+                approveBtn.disabled = true;
+                approveBtn.textContent = 'Approved ✓';
+              }
+            }
           }
         }
       } catch (e) {

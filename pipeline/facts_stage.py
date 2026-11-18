@@ -8,7 +8,7 @@ from pipeline.db import DatabaseManager
 from pipeline.evidence_checker import DeterministicEvidenceChecker
 from pipeline.facts_extractor import FactsExtractor
 from pipeline.state_machine import PipelineStateMachine
-from schemas.common import CorroborationStatus, JobStatus, StageName
+from schemas.common import CorroborationStatus, JobStatus, SourceTier, StageName
 from schemas.config import PipelineConfig
 from schemas.facts import ExtractedFact, FactLedger
 from schemas.sources import StoredSource
@@ -60,20 +60,44 @@ class FactsPipelineStage:
         sources_by_id: Dict[str, StoredSource] = {s.source_id: s for s in sources}
         allowlisted_sources = [s for s in sources if s.is_allowlisted]
 
-        logger.info(
-            "Extracting facts for job %s from %d sources (%d allowlisted)",
-            job_id,
-            len(sources),
-            len(allowlisted_sources),
+        # Prioritize substantial sources: Tier 1 & Tier 2 first, preserving stable order within tiers
+        tier_order = {SourceTier.TIER_1: 0, SourceTier.TIER_2: 1, SourceTier.TIER_3: 2, SourceTier.UNKNOWN: 3}
+        substantial = [s for s in allowlisted_sources if s.word_count >= 40] or allowlisted_sources
+        sorted_sources = sorted(
+            substantial,
+            key=lambda s: tier_order.get(s.source_tier, 3),
         )
 
-        # 1. Fact Extraction (Section 6.1)
-        tasks = [self.extractor.extract_facts_from_source(src, job_id) for src in allowlisted_sources]
-        results = await asyncio.gather(*tasks)
+        # Select top distinct-domain substantial sources to maximize corroboration
+        seen_domains = set()
+        sources_to_extract: List[StoredSource] = []
+        for s in sorted_sources:
+            if s.domain not in seen_domains:
+                seen_domains.add(s.domain)
+                sources_to_extract.append(s)
+            if len(sources_to_extract) >= 3:
+                break
+        if len(sources_to_extract) < 3:
+            for s in sorted_sources:
+                if s not in sources_to_extract:
+                    sources_to_extract.append(s)
+                if len(sources_to_extract) >= 3:
+                    break
 
+        logger.info(
+            "Extracting facts for job %s from %d sources (%d selected across %d domains)",
+            job_id,
+            len(sources),
+            len(sources_to_extract),
+            len(seen_domains),
+        )
+
+        # 1. Sequential Fact Extraction (Section 6.1) to avoid free-tier concurrency throttles
         all_candidate_facts: List[ExtractedFact] = []
-        for res in results:
-            all_candidate_facts.extend(res)
+        for src in sources_to_extract:
+            facts = await self.extractor.extract_facts_from_source(src, job_id)
+            all_candidate_facts.extend(facts)
+            await asyncio.sleep(0.5)
 
         # 2. Deterministic Evidence Check (Section 6.3)
         valid_facts, discarded_facts = self.evidence_checker.validate_facts(all_candidate_facts, sources_by_id)

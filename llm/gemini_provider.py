@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 from typing import Optional
@@ -23,11 +24,14 @@ class GeminiProvider(BaseLLMProvider):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        default_model: str = "gemini-2.5-flash",
+        default_model: str = "gemini-3.5-flash-lite",
         timeout_seconds: float = 30.0,
     ):
         super().__init__(name="gemini", default_model=default_model, timeout_seconds=timeout_seconds)
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
+        if api_key is not None:
+            self.api_key = api_key if api_key != "" else None
+        else:
+            self.api_key = os.environ.get("GEMINI_API_KEY")
         self._client: Optional[genai.Client] = None
         if self.api_key:
             self._client = genai.Client(api_key=self.api_key)
@@ -58,10 +62,14 @@ class GeminiProvider(BaseLLMProvider):
         start_time = time.perf_counter()
         try:
             assert self._client is not None
-            response = await self._client.aio.models.generate_content(
-                model=model_name,
-                contents=request.prompt,
-                config=config,
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self._client.models.generate_content,
+                    model=model_name,
+                    contents=request.prompt,
+                    config=config,
+                ),
+                timeout=self.timeout_seconds,
             )
             elapsed = time.perf_counter() - start_time
 
@@ -81,6 +89,9 @@ class GeminiProvider(BaseLLMProvider):
                 latency_seconds=round(elapsed, 3),
             )
 
+        except asyncio.TimeoutError as e:
+            logger.warning("Gemini request timed out after %.1f s", self.timeout_seconds)
+            raise LLMProviderError(f"Gemini request timed out after {self.timeout_seconds}s") from e
         except errors.APIError as e:
             code = getattr(e, "code", 500)
             msg = str(e)

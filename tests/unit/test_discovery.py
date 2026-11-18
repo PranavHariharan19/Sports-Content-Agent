@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import email.utils
 from unittest.mock import AsyncMock, patch
 import pytest
 
@@ -7,7 +8,9 @@ from pipeline.sources_trust import SourceTrustManager
 from schemas.common import SourceTier, SportType
 
 
-SAMPLE_RSS_XML = """<?xml version="1.0" encoding="UTF-8"?>
+def get_sample_rss_xml() -> str:
+    now_rfc822 = email.utils.format_datetime(datetime.now(timezone.utc))
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Test Sports News</title>
@@ -15,13 +18,13 @@ SAMPLE_RSS_XML = """<?xml version="1.0" encoding="UTF-8"?>
       <title>Arsenal defeat Chelsea 3-1 in London Derby</title>
       <link>https://www.bbc.co.uk/sport/football/12345</link>
       <description>Bukayo Saka and Declan Rice scored as Arsenal won.</description>
-      <pubDate>Mon, 16 Nov 2026 10:00:00 GMT</pubDate>
+      <pubDate>{now_rfc822}</pubDate>
     </item>
     <item>
       <title>Manchester City sign new midfield prospect</title>
       <link>https://www.skysports.com/football/news/67890</link>
       <description>Pep Guardiola confirms agreement.</description>
-      <pubDate>Mon, 16 Nov 2026 11:30:00 GMT</pubDate>
+      <pubDate>{now_rfc822}</pubDate>
     </item>
   </channel>
 </rss>
@@ -36,7 +39,7 @@ async def test_rss_discovery_source():
 
     mock_resp = AsyncMock()
     mock_resp.status_code = 200
-    mock_resp.text = SAMPLE_RSS_XML
+    mock_resp.text = get_sample_rss_xml()
 
     with patch("httpx.AsyncClient.get", return_value=mock_resp):
         feed_cfg = {"name": "BBC Sport", "url": "https://feeds.bbci.co.uk/sport.xml"}
@@ -56,7 +59,7 @@ async def test_discovery_engine_age_filtering():
     engine = DiscoveryEngine(stm)
 
     now = datetime.now(timezone.utc)
-    fresh_article = SAMPLE_RSS_XML
+    fresh_article = get_sample_rss_xml()
 
     mock_resp = AsyncMock()
     mock_resp.status_code = 200
