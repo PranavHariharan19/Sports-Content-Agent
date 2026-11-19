@@ -864,6 +864,11 @@ class DatabaseManager:
         now = datetime.now(timezone.utc).isoformat()
         with self.get_connection() as conn:
             for a in assets:
+                # Remove existing asset for this job and beat to prevent duplicate rows
+                conn.execute(
+                    "DELETE FROM media_assets WHERE job_id = ? AND beat_id = ?",
+                    (a.job_id, a.beat_id),
+                )
                 conn.execute(
                     """
                     INSERT INTO media_assets (
@@ -871,16 +876,6 @@ class DatabaseManager:
                         source_provider, attribution, headline, caption_text,
                         start_ms, end_ms, duration_seconds, width, height, query_used, created_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(asset_id) DO UPDATE SET
-                        file_path = excluded.file_path,
-                        source_provider = excluded.source_provider,
-                        attribution = excluded.attribution,
-                        headline = excluded.headline,
-                        caption_text = excluded.caption_text,
-                        start_ms = excluded.start_ms,
-                        end_ms = excluded.end_ms,
-                        duration_seconds = excluded.duration_seconds,
-                        query_used = excluded.query_used
                     """,
                     (
                         a.asset_id,
@@ -913,31 +908,37 @@ class DatabaseManager:
                        start_ms, end_ms, duration_seconds, width, height, query_used
                 FROM media_assets
                 WHERE job_id = ?
-                ORDER BY beat_id ASC
+                ORDER BY beat_id ASC, created_at DESC
                 """,
                 (job_id,),
             ).fetchall()
 
-            return [
-                MediaAsset(
-                    asset_id=r["asset_id"],
-                    job_id=r["job_id"],
-                    beat_id=r["beat_id"],
-                    media_type=MediaType(r["media_type"]),
-                    file_path=r["file_path"],
-                    source_provider=r["source_provider"],
-                    attribution=r["attribution"],
-                    headline=r["headline"],
-                    caption_text=r["caption_text"],
-                    start_ms=r["start_ms"],
-                    end_ms=r["end_ms"],
-                    duration_seconds=r["duration_seconds"],
-                    width=r["width"],
-                    height=r["height"],
-                    query_used=r["query_used"],
+            seen_beats = set()
+            assets: List[MediaAsset] = []
+            for r in rows:
+                if r["beat_id"] in seen_beats:
+                    continue
+                seen_beats.add(r["beat_id"])
+                assets.append(
+                    MediaAsset(
+                        asset_id=r["asset_id"],
+                        job_id=r["job_id"],
+                        beat_id=r["beat_id"],
+                        media_type=MediaType(r["media_type"]),
+                        file_path=r["file_path"],
+                        source_provider=r["source_provider"],
+                        attribution=r["attribution"],
+                        headline=r["headline"],
+                        caption_text=r["caption_text"],
+                        start_ms=r["start_ms"],
+                        end_ms=r["end_ms"],
+                        duration_seconds=r["duration_seconds"],
+                        width=r["width"],
+                        height=r["height"],
+                        query_used=r["query_used"],
+                    )
                 )
-                for r in rows
-            ]
+            return sorted(assets, key=lambda x: x.beat_id)
 
     def get_media_asset_for_beat(self, job_id: str, beat_id: int) -> Optional[MediaAsset]:
         """Retrieve media asset for a specific beat of a job."""
@@ -949,6 +950,7 @@ class DatabaseManager:
                        start_ms, end_ms, duration_seconds, width, height, query_used
                 FROM media_assets
                 WHERE job_id = ? AND beat_id = ?
+                ORDER BY created_at DESC
                 LIMIT 1
                 """,
                 (job_id, beat_id),

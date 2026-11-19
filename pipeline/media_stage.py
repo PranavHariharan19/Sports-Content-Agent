@@ -374,7 +374,7 @@ class MediaPipelineStage:
         )
 
         return MediaAsset(
-            asset_id=f"media_{job_id}_beat_{beat.beat_id}_{uuid.uuid4().hex[:6]}",
+            asset_id=f"media_{job_id}_beat_{beat.beat_id}",
             job_id=job_id,
             beat_id=beat.beat_id,
             media_type=MediaType.STAT_CARD,
@@ -417,7 +417,7 @@ class MediaPipelineStage:
         if fetch_result:
             provider, attribution = fetch_result
             return MediaAsset(
-                asset_id=f"media_{job_id}_beat_{beat.beat_id}_{uuid.uuid4().hex[:6]}",
+                asset_id=f"media_{job_id}_beat_{beat.beat_id}",
                 job_id=job_id,
                 beat_id=beat.beat_id,
                 media_type=MediaType.PHOTO,
@@ -500,7 +500,7 @@ class MediaPipelineStage:
                 evidence_source="USER CUSTOMIZED",
             )
             updated_asset = MediaAsset(
-                asset_id=existing_asset.asset_id if existing_asset else f"media_{job_id}_beat_{beat_id}_{uuid.uuid4().hex[:6]}",
+                asset_id=f"media_{job_id}_beat_{beat_id}",
                 job_id=job_id,
                 beat_id=beat_id,
                 media_type=MediaType.STAT_CARD,
@@ -528,7 +528,7 @@ class MediaPipelineStage:
 
             prov, attr = fetch_res
             updated_asset = MediaAsset(
-                asset_id=existing_asset.asset_id if existing_asset else f"media_{job_id}_beat_{beat_id}_{uuid.uuid4().hex[:6]}",
+                asset_id=f"media_{job_id}_beat_{beat_id}",
                 job_id=job_id,
                 beat_id=beat_id,
                 media_type=MediaType.PHOTO,
