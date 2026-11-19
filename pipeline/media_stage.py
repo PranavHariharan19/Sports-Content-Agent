@@ -23,6 +23,17 @@ from schemas.voice import VoiceStageResult
 logger = get_logger(__name__)
 
 
+STOP_WORDS = {
+    "did", "what", "when", "where", "why", "how", "who", "which",
+    "is", "are", "was", "were", "can", "could", "would", "should",
+    "the", "this", "that", "these", "those", "there", "here",
+    "according", "despite", "after", "before", "while", "with", "without",
+    "from", "into", "over", "under", "first", "second", "third", "fourth",
+    "last", "next", "every", "some", "many", "more", "most",
+    "just", "also", "even", "only", "in", "on", "at", "to", "for", "of", "by", "an", "a", "and", "or", "but", "not", "it", "its", "as"
+}
+
+
 class MediaPipelineStage:
     """Orchestrates media retrieval and PIL graphic generation for each script beat."""
 
@@ -176,19 +187,142 @@ class MediaPipelineStage:
 
         return timings
 
-    def _is_stat_beat(self, beat: ScriptBeat, cited_facts: List[ExtractedFact]) -> bool:
-        """Determine if a beat is best depicted as a dedicated numerical stat card."""
-        # 1. Fact type check
-        for f in cited_facts:
-            if f.fact_type in (FactType.NUMBER, FactType.RECORD, FactType.RANKING):
-                return True
+    def _clean_entity(self, text: str) -> Optional[str]:
+        """Strip possessives and boundary stop words from an entity name."""
+        t = re.sub(r"['’]s\b", "", text).strip()
+        tokens = t.split()
+        while tokens and tokens[0].lower() in STOP_WORDS:
+            tokens.pop(0)
+        while tokens and tokens[-1].lower() in STOP_WORDS:
+            tokens.pop()
+        cleaned = " ".join(tokens).strip()
+        if len(cleaned) >= 3 and cleaned.lower() not in STOP_WORDS and not cleaned.isdigit():
+            return cleaned
+        return None
 
-        # 2. Spoken text numerical patterns (e.g., "43-game", "104th", "1.465 seconds", "12 minutes")
-        has_stat_pattern = bool(
-            re.search(r"\b(\d+[\.,]?\d*)\s*(?:game|match|run|second|sec|minute|min|win|point|lap|meter|yard|run|goal)s?\b", beat.spoken_text, re.IGNORECASE)
-            or re.search(r"\b\d+(?:st|nd|rd|th)\b", beat.spoken_text, re.IGNORECASE)
+    def _is_person_name(self, name: str) -> bool:
+        """Heuristic to determine if a multi-word entity is likely a person."""
+        words = name.split()
+        if len(words) < 2 or len(words) > 3:
+            return False
+        lower = name.lower()
+        excluded = {
+            "nations league", "uefa nations", "world cup", "premier league",
+            "champions league", "grand prix", "first half", "second half",
+            "extra time", "injury time", "penalty spot", "penalty kick",
+            "red card", "yellow card", "pit stop", "safety car",
+            "wanda metropolitano", "silverstone circuit"
+        }
+        return not any(ex in lower for ex in excluded)
+
+    def _extract_people(self, beat: ScriptBeat, cited_facts: List[ExtractedFact]) -> List[str]:
+        """Extract athlete and manager names from cited facts and spoken text."""
+        found: List[str] = []
+        for f in cited_facts:
+            for ent in f.normalized_entities:
+                cleaned = self._clean_entity(ent)
+                if cleaned and self._is_person_name(cleaned):
+                    if cleaned not in found:
+                        found.append(cleaned)
+
+        candidates = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2}\b", beat.spoken_text)
+        for c in candidates:
+            cleaned = self._clean_entity(c)
+            if cleaned and self._is_person_name(cleaned):
+                if cleaned not in found:
+                    found.append(cleaned)
+        return found
+
+    def _has_named_person(self, beat: ScriptBeat, cited_facts: List[ExtractedFact]) -> bool:
+        """Check if the beat explicitly features a named athlete or coach."""
+        return len(self._extract_people(beat, cited_facts)) > 0
+
+    def _build_queries_for_beat(
+        self, beat: ScriptBeat, cited_facts: List[ExtractedFact], sport
+    ) -> List[str]:
+        """Construct targeted, sports-grounded search queries in strict priority order."""
+        queries: List[str] = []
+
+        # 1. Athlete or manager names (highest visual relevance for sports fans)
+        people = self._extract_people(beat, cited_facts)
+        for p in people:
+            q_sport = f"{p} {sport.value}"
+            if q_sport not in queries:
+                queries.append(q_sport)
+            if p not in queries:
+                queries.append(p)
+
+        # 2. Venues / Stadiums
+        stadium_match = re.search(
+            r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Stadium|Metropolitano|Arena|Circuit|Track|Ground|Park))\b",
+            beat.spoken_text,
         )
-        return has_stat_pattern
+        if stadium_match:
+            venue = self._clean_entity(stadium_match.group(1))
+            if venue:
+                queries.append(f"{venue} stadium")
+                queries.append(venue)
+
+        # 3. Teams / Nations with sports context
+        teams: List[str] = []
+        for f in cited_facts:
+            for ent in f.normalized_entities:
+                cleaned = self._clean_entity(ent)
+                if cleaned and not self._is_person_name(cleaned):
+                    if cleaned not in teams and cleaned not in queries:
+                        teams.append(cleaned)
+
+        for word in re.findall(r"\b[A-Z][a-z]+\b", beat.spoken_text):
+            cleaned = self._clean_entity(word)
+            if cleaned and len(cleaned) >= 4 and not self._is_person_name(cleaned) and cleaned not in teams:
+                teams.append(cleaned)
+
+        for t in teams:
+            if beat.beat_type.value in ("hook", "resolution") or "win" in beat.spoken_text.lower() or "stun" in beat.spoken_text.lower():
+                queries.append(f"{t} national {sport.value} team celebration")
+                queries.append(f"{t} {sport.value} celebration")
+            queries.append(f"{t} national {sport.value} team")
+            queries.append(f"{t} {sport.value}")
+
+        # 4. Contextual action fallbacks
+        if beat.beat_type.value == "hook" or "goal" in beat.spoken_text.lower() or "stun" in beat.spoken_text.lower():
+            queries.append(f"{sport.value} goal celebration")
+            queries.append(f"{sport.value} match action")
+        elif "crowd" in beat.spoken_text.lower() or "stadium" in beat.spoken_text.lower() or beat.beat_type.value == "closing":
+            queries.append(f"stadium {sport.value} crowd")
+            queries.append(f"{sport.value} stadium atmosphere")
+        else:
+            queries.append(f"{sport.value} match action")
+            queries.append(f"{sport.value} action celebration")
+
+        return queries
+
+    def _is_stat_beat(self, beat: ScriptBeat, cited_facts: List[ExtractedFact]) -> bool:
+        """Determine if a beat is best depicted as a dedicated numerical stat card.
+        
+        Rules:
+        - If the beat names an athlete or manager, always prefer their photo.
+        - Never generate stat cards for match minutes (e.g. 65 minutes).
+        - Only generate for genuine milestones / records (e.g. 43-game unbeaten run).
+        """
+        if self._has_named_person(beat, cited_facts):
+            return False
+
+        has_record_fact = any(
+            f.fact_type == FactType.RECORD
+            and f.normalized_value
+            and any(c.isdigit() for c in f.normalized_value)
+            for f in cited_facts
+        )
+        if has_record_fact:
+            return True
+
+        has_streak_pattern = bool(
+            re.search(r"\b(\d+)\s*-(?:game|match|race|run|win|goal)\b", beat.spoken_text, re.IGNORECASE)
+            or re.search(r"\b(\d+)\s+(?:games|matches|races|runs|wins)\s+unbeaten\b", beat.spoken_text, re.IGNORECASE)
+            or re.search(r"\b\d+(?:st|nd|rd|th)\s+(?:win|title|pole|goal|century)\b", beat.spoken_text, re.IGNORECASE)
+        )
+        return has_streak_pattern
 
     def _create_stat_card_asset(
         self,
@@ -199,27 +333,35 @@ class MediaPipelineStage:
         timing: Dict[str, float],
         output_path: Path,
     ) -> MediaAsset:
-        """Generate a PIL stat card for a factual beat with numbers or records."""
-        # Extract stat value and label
-        stat_val = "KEY STAT"
+        """Generate a PIL stat card for an official milestone or numerical streak."""
+        stat_val = None
         stat_lbl = "OFFICIAL RECORD"
         evidence_source = "VERIFIED GROUNDING"
 
-        # Try to extract best stat from cited facts
+        # 1. Search for RECORD facts with digits (skip quotes and sentiment words)
         for f in cited_facts:
-            if f.normalized_value:
-                stat_val = f.normalized_value
-                stat_lbl = f.claim[:36].upper()
+            if f.fact_type == FactType.RECORD and f.normalized_value and any(c.isdigit() for c in f.normalized_value):
+                stat_val = f"{f.normalized_value} GAMES" if "game" in f.claim.lower() or "unbeaten" in f.claim.lower() else f.normalized_value
+                stat_lbl = "UNBEATEN STREAK" if "unbeaten" in f.claim.lower() else (f.claim[:36].upper() if f.claim else "OFFICIAL RECORD")
                 if f.attribution_outlet:
                     evidence_source = f"{f.attribution_outlet} // {f.source_tier.value.upper()}"
                 break
 
-        # Fallback to regex extraction from spoken text
-        if stat_val == "KEY STAT":
-            match = re.search(r"\b(\d+[\.,]?\d*(?:st|nd|rd|th)?)\b", beat.spoken_text)
-            if match:
-                stat_val = match.group(1).upper()
-                stat_lbl = "MATCH DETAIL"
+        # 2. Search for explicit streak pattern in spoken text
+        if not stat_val:
+            m = re.search(r"\b(\d+)\s*-(?:game|match|race|run|win|goal)s?\b", beat.spoken_text, re.IGNORECASE)
+            if m:
+                stat_val = f"{m.group(1)} GAMES"
+                stat_lbl = "UNBEATEN STREAK"
+            else:
+                m2 = re.search(r"\b(\d+(?:st|nd|rd|th))\b", beat.spoken_text, re.IGNORECASE)
+                if m2:
+                    stat_val = m2.group(1).upper()
+                    stat_lbl = "CAREER MILESTONE"
+
+        if not stat_val:
+            stat_val = "UNBEATEN"
+            stat_lbl = "HISTORIC STREAK"
 
         self.card_generator.generate_stat_card(
             headline=beat.spoken_text,
@@ -256,26 +398,9 @@ class MediaPipelineStage:
         timing: Dict[str, float],
         output_path: Path,
     ) -> MediaAsset:
-        """Fetch high-quality photo from open providers, falling back to PIL card if unreachable."""
-        # Build candidate search queries in priority order
-        queries: List[str] = []
+        """Fetch high-quality photo from open providers using targeted entity queries."""
+        queries = self._build_queries_for_beat(beat, cited_facts, sport)
 
-        # 1. Named entities from cited facts
-        for f in cited_facts:
-            for ent in f.normalized_entities:
-                if ent and len(ent) >= 3 and ent not in queries:
-                    queries.append(ent)
-
-        # 2. Extract capitalized entity names from spoken text
-        named_in_text = re.findall(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b", beat.spoken_text)
-        for n in named_in_text:
-            if n not in queries and len(n) >= 4 and n.lower() not in ("what", "this", "according", "there", "when"):
-                queries.append(n)
-
-        # 3. Sport generic action fallback query
-        queries.append(f"{sport.value} action celebration")
-
-        # Execute search across queries
         fetch_result = None
         used_query = None
 
@@ -317,3 +442,106 @@ class MediaPipelineStage:
             timing=timing,
             output_path=output_path,
         )
+
+    async def replace_beat_visual(
+        self,
+        job_id: str,
+        beat_id: int,
+        query: Optional[str] = None,
+        provider: Optional[str] = "all",
+        media_type: Optional[str] = "photo",
+        stat_value: Optional[str] = None,
+        stat_label: Optional[str] = None,
+        detail_text: Optional[str] = None,
+    ) -> MediaAsset:
+        """Manually replace or regenerate the visual asset for a single beat."""
+        job = self.db.get_job(job_id)
+        if not job:
+            raise ValueError(f"Job {job_id} not found")
+
+        script = self.db.get_script_for_job(job_id)
+        if not script or not script.beats:
+            raise ValueError(f"No script beats found for job {job_id}")
+
+        target_beat = next((b for b in script.beats if b.beat_id == beat_id), None)
+        if not target_beat:
+            raise ValueError(f"Beat {beat_id} not found in script for job {job_id}")
+
+        existing_asset = self.db.get_media_asset_for_beat(job_id, beat_id)
+        beat_timings = self._get_beat_timings(job_id, script)
+        timing = beat_timings.get(
+            beat_id,
+            {
+                "start_ms": existing_asset.start_ms if existing_asset else 0,
+                "end_ms": existing_asset.end_ms if existing_asset else 5000,
+                "duration_seconds": existing_asset.duration_seconds if existing_asset else 5.0,
+            },
+        )
+
+        job_assets_dir = self.assets_dir / job_id
+        job_assets_dir.mkdir(parents=True, exist_ok=True)
+        output_path = job_assets_dir / f"beat_{beat_id}.jpg"
+
+        facts = self.db.get_facts_for_job(job_id)
+        facts_by_id = {f.fact_id: f for f in facts}
+        cited_facts = [facts_by_id[fid] for fid in target_beat.cited_fact_ids if fid in facts_by_id]
+
+        if media_type == "stat_card":
+            val = stat_value.strip() if stat_value and stat_value.strip() else "KEY STAT"
+            lbl = stat_label.strip() if stat_label and stat_label.strip() else "OFFICIAL RECORD"
+            dtl = detail_text.strip() if detail_text and detail_text.strip() else target_beat.spoken_text
+            self.card_generator.generate_stat_card(
+                headline=target_beat.spoken_text,
+                stat_value=val,
+                stat_label=lbl,
+                detail_text=dtl,
+                sport=job.sport,
+                output_path=output_path,
+                evidence_source="USER CUSTOMIZED",
+            )
+            updated_asset = MediaAsset(
+                asset_id=existing_asset.asset_id if existing_asset else f"media_{job_id}_beat_{beat_id}_{uuid.uuid4().hex[:6]}",
+                job_id=job_id,
+                beat_id=beat_id,
+                media_type=MediaType.STAT_CARD,
+                file_path=str(output_path),
+                source_provider="pil_stat_card",
+                attribution="User Custom Stat Card",
+                headline=val,
+                caption_text=target_beat.spoken_text,
+                start_ms=int(timing["start_ms"]),
+                end_ms=int(timing["end_ms"]),
+                duration_seconds=round(timing["duration_seconds"], 2),
+                query_used=val,
+            )
+        else:
+            q = query.strip() if query and query.strip() else self._build_queries_for_beat(target_beat, cited_facts, job.sport)[0]
+            pref = None if provider == "all" else provider
+            fetch_res = await self.fetcher.search_and_download(
+                query=q,
+                output_path=output_path,
+                sport=job.sport,
+                prefer_provider=pref,
+            )
+            if not fetch_res:
+                raise ValueError(f"Could not find any suitable images for query '{q}' (provider: {provider})")
+
+            prov, attr = fetch_res
+            updated_asset = MediaAsset(
+                asset_id=existing_asset.asset_id if existing_asset else f"media_{job_id}_beat_{beat_id}_{uuid.uuid4().hex[:6]}",
+                job_id=job_id,
+                beat_id=beat_id,
+                media_type=MediaType.PHOTO,
+                file_path=str(output_path),
+                source_provider=prov,
+                attribution=attr,
+                headline=q.title(),
+                caption_text=target_beat.spoken_text,
+                start_ms=int(timing["start_ms"]),
+                end_ms=int(timing["end_ms"]),
+                duration_seconds=round(timing["duration_seconds"], 2),
+                query_used=q,
+            )
+
+        self.db.save_media_assets([updated_asset])
+        return updated_asset

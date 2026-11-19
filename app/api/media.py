@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from app.logging_config import get_logger
 from pipeline.db import DatabaseManager
@@ -11,6 +12,15 @@ from pipeline.media_stage import MediaPipelineStage
 from pipeline.state_machine import PipelineStateMachine
 from schemas.common import StageName
 from schemas.media import MediaAsset, MediaStageResult
+
+
+class ReplaceMediaRequest(BaseModel):
+    query: Optional[str] = None
+    provider: Optional[str] = "all"  # "all", "wikimedia", "pexels", "pixabay"
+    media_type: Optional[str] = "photo"  # "photo" or "stat_card"
+    stat_value: Optional[str] = None
+    stat_label: Optional[str] = None
+    detail_text: Optional[str] = None
 
 logger = get_logger(__name__)
 
@@ -97,3 +107,36 @@ async def get_media_image(
         media_type="image/jpeg",
         filename=image_path.name,
     )
+
+
+@router.post("/{job_id}/media/{beat_id}/replace", response_model=MediaAsset)
+async def replace_media_for_beat(
+    job_id: str,
+    beat_id: int,
+    req: ReplaceMediaRequest,
+    db: DatabaseManager = Depends(get_db),
+    sm: PipelineStateMachine = Depends(get_state_machine),
+) -> MediaAsset:
+    """Manually search, customize, or replace the visual asset for a single beat."""
+    job = db.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    stage = MediaPipelineStage(db=db, state_machine=sm)
+    try:
+        updated = await stage.replace_beat_visual(
+            job_id=job_id,
+            beat_id=beat_id,
+            query=req.query,
+            provider=req.provider,
+            media_type=req.media_type,
+            stat_value=req.stat_value,
+            stat_label=req.stat_label,
+            detail_text=req.detail_text,
+        )
+        return updated
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to replace media for beat %d: %s", beat_id, str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to replace visual: {str(e)}")
